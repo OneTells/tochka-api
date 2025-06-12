@@ -1,5 +1,6 @@
 FROM python:3.13-slim-bookworm AS builder
 
+ENV TZ=Europe/Moscow
 ENV UV_COMPILE_BYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONOPTIMIZE=2
@@ -20,20 +21,18 @@ RUN apt-get update && \
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
-RUN uv venv -p python3.13
-RUN uv pip install --no-deps -e .
-RUN uv pip install -e .
+RUN uv sync --frozen --no-install-project --compile --no-dev
 
 FROM python:3.13-slim-bookworm AS production
 
+ENV TZ=Europe/Moscow
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONOPTIMIZE=2
-ENV PATH="/app/.venv/bin:$PATH"
 
-COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/.venv /venv
+ENV PATH="/venv/bin:$PATH"
 
 WORKDIR /app
 COPY ./src .
 
 RUN python -m compileall /app
-RUN /app/.venv/bin/gunicorn --version
