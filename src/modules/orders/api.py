@@ -132,7 +132,7 @@ async def cancel_order(
 @router.get('/public/orderbook/{ticker}')
 async def get_order_book(
     ticker: Annotated[str, Path(pattern='^[A-Z]{2,10}$')],
-    limit: Annotated[int, Query(default=10)]
+    limit: Annotated[int, Query()] = 10
 ):
     is_instrument_exist = await (
         Select(true())

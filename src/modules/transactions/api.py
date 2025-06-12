@@ -16,7 +16,7 @@ router = APIRouter()
 @router.get("/public/transactions/{ticker}")
 async def get_public_transaction(
     ticker: Annotated[str, Path(pattern='^[A-Z]{2,10}$')],
-    limit: Annotated[int, Query(default=10)]
+    limit: Annotated[int, Query()] = 10
 ):
     is_instrument_exist = await (
         Select(true())
