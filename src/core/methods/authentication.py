@@ -16,10 +16,7 @@ class Authentication:
         self.__user_role = user_role
 
     @staticmethod
-    async def __get_user(authorization: str | None) -> UserModel | None:
-        if authorization is None:
-            return None
-
+    async def __get_user(authorization: str) -> UserModel:
         try:
             scheme, token = authorization.split(' ', 1)
         except ValueError:
@@ -44,11 +41,16 @@ class Authentication:
 
         return user
 
-    async def __call__(self, authorization: Annotated[str, Header()]) -> UserModel:
-        user = await self.__get_user(authorization)
+    async def __call__(
+        self,
+        authorization: Annotated[str | None, Header(default=None)],
+        token: Annotated[str | None, Header(default=None)]
+    ) -> UserModel:
 
-        if user is None:
+        if token is None and authorization is None:
             raise HTTPException(status_code=401, detail="Необходимо авторизоваться")
+
+        user = await self.__get_user(authorization or token)
 
         if self.__user_role == UserRole.ADMIN and user.role != UserRole.ADMIN:
             raise HTTPException(status_code=403, detail="Не достаточно прав")
