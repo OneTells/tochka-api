@@ -28,14 +28,10 @@ FROM python:3.13-slim-bookworm AS production
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONOPTIMIZE=2
 
-ENV VIRTUAL_ENV=/venv
 ENV PATH="/venv/bin:$PATH"
-
 COPY --from=builder /app/.venv /venv
 
 WORKDIR /app
 COPY ./src .
 
 RUN python -m compileall /app
-
-entrypoint exec: gunicorn main:app -w 2 -b 0.0.0.0:8000 --timeout 600 -k uvicorn.workers.UvicornWorker --keep-alive 600 --forwarded-allow-ips="172.19.0.3"
