@@ -1,11 +1,9 @@
 import uuid
 from typing import Annotated
 
-from asyncpg import Record
 from everbase import Insert, Select, Delete
 from fastapi import APIRouter, Body, Depends, Path, HTTPException
 from fastapi.responses import ORJSONResponse
-from loguru import logger
 from sqlalchemy import true, Update
 
 from core.methods.authentication import Authentication
@@ -58,7 +56,7 @@ async def delete_user(
     return ORJSONResponse(content=response.model_dump())
 
 
-@router.post("/balance/deposit")
+@router.post("/admin/balance/deposit")
 async def deposit(
     user_id: Annotated[str, Body()],
     ticker: Annotated[str, Body()],
@@ -95,7 +93,7 @@ async def deposit(
     return ORJSONResponse(content={"success": True})
 
 
-@router.post("/balance/withdraw")
+@router.post("/admin/balance/withdraw")
 async def withdraw(
     user_id: Annotated[str, Body()],
     ticker: Annotated[str, Body()],
