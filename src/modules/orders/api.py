@@ -101,6 +101,9 @@ async def get_order(
         .fetch_one(database)
     )
 
+    if response is None:
+        raise HTTPException(status_code=404, detail="Ордер не найден")
+
     if response['price'] is not None:
         return ORJSONResponse(content=LimitOrderModel(**response, body=LimitOrderBody(**response)).model_dump())
 
