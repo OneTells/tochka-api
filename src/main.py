@@ -13,9 +13,9 @@ app = FastAPI(
     title='Tochka API',
     version='0.0.1',
     lifespan=Lifespan.run,
-    docs_url=None,
-    redoc_url=None,
-    openapi_url=None
+    # docs_url=None,
+    # redoc_url=None,
+    # openapi_url=None
 )
 
 # noinspection PyTypeChecker
