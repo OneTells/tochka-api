@@ -59,7 +59,8 @@ async def create_order(
     order_ids: list[uuid.UUID] = await (
         Insert(Order)
         .values(user_id=user_id, ticker=order.ticker, qty=order.qty, price=order.price, direction=order.direction)
-        .returning(database, Order.id, model=lambda e: e['id'])
+        .returning(Order.id)
+        .fetch_all(database, model=lambda e: e['id'])
     )
 
     await execute_order(order_ids[0], order)
@@ -74,7 +75,7 @@ async def get_user_orders(
     response = await (
         Select(Order)
         .where(Order.user_id == user_id, Order.status == OrderStatus.NEW)
-        .fetch(database)
+        .fetch_all(database)
     )
 
     result = []
@@ -114,7 +115,8 @@ async def cancel_order(
         Update(Order)
         .where(Order.user_id == user_id, Order.status == OrderStatus.NEW, Order.id == order_id)
         .values(status=OrderStatus.CANCELLED)
-        .returning(database, true())
+        .returning(true())
+        .fetch_all(database)
     )
 
     if not response:

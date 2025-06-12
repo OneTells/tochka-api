@@ -56,7 +56,7 @@ async def execute_order(order_id: uuid.UUID, order: LimitOrderBody | MarketOrder
         Select(Order.id, Order.user_id, Order.price, Order.qty, Order.filled)
         .where(*whereclause)
         .order_by(*order_by)
-        .fetch(database)
+        .fetch_all(database)
     )
 
     qty = order.qty

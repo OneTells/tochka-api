@@ -1,10 +1,11 @@
 import uuid
 from typing import Annotated
 
-from everbase import Insert, Select, Delete
+from everbase import Insert, Select, Delete, compile_query, Update
 from fastapi import APIRouter, Body, Depends, Path, HTTPException
 from fastapi.responses import ORJSONResponse
-from sqlalchemy import true, Update
+from loguru import logger
+from sqlalchemy import true
 
 from core.methods.authentication import Authentication
 from core.models.balance import Balance
@@ -19,10 +20,11 @@ router = APIRouter()
 
 @router.post('/public/register')
 async def create_user(name: Annotated[str, Body(embed=True)]):
-    response: list[UserModel] = await (
+    response = await (
         Insert(User)
         .values(name=name, api_key=f'{uuid.uuid4()}')
-        .returning(database, User.id, User.name, User.role, User.api_key, model=UserModel)
+        .returning(User.id, User.name, User.role, User.api_key)
+        .fetch_all(database, model=UserModel)
     )
 
     return ORJSONResponse(content=response[0].model_dump())
@@ -33,7 +35,7 @@ async def get_user_balance(user: Annotated[UserModel, Depends(Authentication(use
     user_balances = await (
         Select(Balance.ticker, Balance.amount)
         .where(Balance.user_id == user.id)
-        .fetch(database)
+        .fetch_all(database)
     )
 
     return ORJSONResponse(content={balance['ticker']: balance['amount'] for balance in user_balances})
@@ -44,10 +46,19 @@ async def delete_user(
     user_id: Annotated[str, Path()],
     _: Annotated[UserModel, Depends(Authentication(user_role=UserRole.ADMIN))]
 ):
-    response: list[UserModel] = await (
+    logger.info(
+        compile_query(
+            Delete(User)
+            .where(User.id == user_id)
+            .returning(User.id, User.name, User.role, User.api_key)
+        )
+    )
+
+    response = await (
         Delete(User)
         .where(User.id == user_id)
-        .returning(database, User.id, User.name, User.role, User.api_key, model=UserModel)
+        .returning(User.id, User.name, User.role, User.api_key)
+        .fetch_all(database, model=UserModel)
     )
 
     if not response:
@@ -124,7 +135,8 @@ async def withdraw(
         Update(Balance)
         .values(amount=Balance.amount - amount)
         .where(Balance.user_id == user_id, Balance.ticker == ticker, Balance.amount >= amount)
-        .returning(database, true())
+        .returning(true())
+        .fetch_all(database)
     )
 
     if not response:

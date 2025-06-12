@@ -24,7 +24,8 @@ async def create_instrument(
         Insert(Instrument)
         .values(ticker=instrument.ticker, name=instrument.name)
         .on_conflict_do_nothing()
-        .returning(database, true())
+        .returning(true())
+        .fetch_all(database)
     )
 
     if not response:
@@ -37,7 +38,7 @@ async def create_instrument(
 async def get_instrument():
     response = await (
         Select(Instrument.ticker, Instrument.name)
-        .fetch(database, model=lambda x: InstrumentModel(**x).model_dump())
+        .fetch_all(database, model=lambda x: InstrumentModel(**x).model_dump())
     )
 
     return ORJSONResponse(content=response)
@@ -52,6 +53,7 @@ async def delete_instrument(
         Delete(Instrument)
         .where(Instrument.ticker == ticker)
         .returning(database, true())
+        .fetch_all(database)
     )
 
     if not response:
