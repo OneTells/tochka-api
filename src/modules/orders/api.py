@@ -109,12 +109,12 @@ async def get_order(
 
 @router.delete("/order/{order_id}")
 async def cancel_order(
-    order: Annotated[UUID4, Path()],
+    order_id: Annotated[UUID4, Path()],
     user_id: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
     response = await (
         Update(Order)
-        .where(Order.user_id == user_id, Order.status == OrderStatus.NEW, Order.id == order.id)
+        .where(Order.user_id == user_id, Order.status == OrderStatus.NEW, Order.id == order_id)
         .values(status=OrderStatus.CANCELLED)
         .returning(true())
         .fetch_all(database)
