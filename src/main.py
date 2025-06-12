@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
 from core.methods.lifespan import Lifespan
-from core.middleware.logger import LoggerMiddleware, LoggerRoute
+from core.middleware.logger import LoggerMiddleware
 from general.routers import v1_router
 
 app = FastAPI(
