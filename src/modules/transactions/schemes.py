@@ -1,11 +1,10 @@
 from datetime import datetime
 from typing import Annotated
 
-from fastapi.openapi.models import Schema
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 
-class TransactionsModel(Schema):
+class TransactionsModel(BaseModel):
     ticker: Annotated[str, Field(pattern='^[A-Z]{2,10}$')]
     amount: Annotated[int, Field(gt=0)]
     price: Annotated[int, Field(gt=0)]

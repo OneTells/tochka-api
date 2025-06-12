@@ -159,7 +159,9 @@ async def get_order_book(
         else:
             asks[order['price']] = asks.get(order['price'], 0) + (order['qty'] - order['filled'])
 
-    return OrderBook(
-        bid_levels=[Level(price=price, qty=qty) for price, qty in sorted(bids.items(), reverse=True)[:limit]],
-        ask_levels=[Level(price=price, qty=qty) for price, qty in sorted(asks.items())[:limit]]
+    return ORJSONResponse(
+        content=OrderBook(
+            bid_levels=[Level(price=price, qty=qty) for price, qty in sorted(bids.items(), reverse=True)[:limit]],
+            ask_levels=[Level(price=price, qty=qty) for price, qty in sorted(asks.items())[:limit]]
+        ).model_dump()
     )

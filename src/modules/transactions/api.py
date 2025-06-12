@@ -2,8 +2,8 @@ from typing import Annotated
 
 from everbase import Select
 from fastapi import APIRouter, Query, HTTPException, Path
+from fastapi.responses import ORJSONResponse
 from sqlalchemy import true
-
 
 from core.models.instrument import Instrument
 from core.models.transaction import Transaction
@@ -33,7 +33,7 @@ async def get_public_transaction(
         .where(Transaction.ticker == ticker)
         .order_by(Transaction.timestamp.desc())
         .limit(limit)
-        .fetch_all(database, model=TransactionsModel)
+        .fetch_all(database, model=lambda x: TransactionsModel(**x).model_dump())
     )
 
-    return transactions
+    return ORJSONResponse(content=transactions)
