@@ -12,7 +12,7 @@ services:
     labels:
       - "traefik.enable=true"
 
-      - "traefik.http.routers.backend.rule=Host(`точка-ремастер.рф`)"
+      - "traefik.http.routers.backend.rule=Host(`api.xn----7sbbtbzrlvejdj5d.xn--p1ai`)"
 
       - "traefik.http.routers.backend.tls=true"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
@@ -25,14 +25,14 @@ services:
 
       - "traefik.http.routers.backend.middlewares=compress-middleware,retry-middleware"
 
-      - "traefik.http.routers.www.rule=Host(`www.точка-ремастер.рф`)"
+      - "traefik.http.routers.www.rule=Host(`www.api.xn----7sbbtbzrlvejdj5d.xn--p1ai`)"
 
       - "traefik.http.routers.www.tls=true"
       - "traefik.http.routers.www.tls.certresolver=letsencrypt"
       - "traefik.http.routers.www.entrypoints=websecure"
 
-      - "traefik.http.middlewares.redirect-to-non-www.redirectregex.regex=^https://www.api.точка-ремастер.рф/(.*)"
-      - "traefik.http.middlewares.redirect-to-non-www.redirectregex.replacement=https://api.точка-ремастер.рф/$${1}"
+      - "traefik.http.middlewares.redirect-to-non-www.redirectregex.regex=^https://www.api.xn----7sbbtbzrlvejdj5d.xn--p1ai/(.*)"
+      - "traefik.http.middlewares.redirect-to-non-www.redirectregex.replacement=https://api.xn----7sbbtbzrlvejdj5d.xn--p1ai/$${1}"
       - "traefik.http.middlewares.redirect-to-non-www.redirectregex.permanent=true"
 
       - "traefik.http.routers.www.middlewares=redirect-to-non-www"
