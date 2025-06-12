@@ -43,11 +43,11 @@ def exception_handler(_: Request, __: Exception):
     )
 
 
-@app.exception_handler(RequestValidationError)
-def validation_exception_handler(_: Request, __: RequestValidationError):
-    return JSONResponse(
-        {'detail': "Необрабатываемая сущность"}, status_code=HTTP_422_UNPROCESSABLE_ENTITY,
-    )
+# @app.exception_handler(RequestValidationError)
+# def validation_exception_handler(_: Request, __: RequestValidationError):
+#     return JSONResponse(
+#         {'detail': "Необрабатываемая сущность"}, status_code=HTTP_422_UNPROCESSABLE_ENTITY,
+#     )
 
 
 if __name__ == '__main__':
