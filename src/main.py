@@ -1,9 +1,8 @@
 from fastapi import FastAPI, APIRouter
-from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
-from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY, HTTP_500_INTERNAL_SERVER_ERROR
+from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
 from core.methods.lifespan import Lifespan
 from core.middleware.logger import LoggerMiddleware
@@ -53,11 +52,4 @@ def exception_handler(_: Request, __: Exception):
 if __name__ == '__main__':
     import uvicorn
 
-    uvicorn.run(
-        'main:app',
-        workers=2,
-        host='0.0.0.0',
-        port=8000,
-        timeout_keep_alive=600,
-        forwarded_allow_ips="172.19.0.3"
-    )
+    uvicorn.run('main:app', workers=2, host='0.0.0.0', timeout_keep_alive=600, forwarded_allow_ips="172.19.0.3")

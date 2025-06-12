@@ -60,13 +60,13 @@ async def create_order(
     orders = await (
         Insert(Order)
         .values(user_id=user.id, ticker=order.ticker, qty=order.qty, price=order.price, direction=order.direction)
-        .returning(Order.id, Order.user_id, Order.price, Order.qty, Order.filled, Order.status)
-        .fetch_all(database, model=OrderModel)
+        .returning(Order.id, Order.user_id, Order.price, Order.qty, Order.filled, Order.status, Order.direction)
+        .fetch_all(database, model=lambda x: (OrderModel(**x), x['direction']))
     )
 
-    await execute_order(orders[0])
+    await execute_order(orders[0][0], orders[0][1])
 
-    return ORJSONResponse(content={"success": True, 'order_id': orders[0].id})
+    return ORJSONResponse(content={"success": True, 'order_id': orders[0][0].id})
 
 
 @router.get("/order")

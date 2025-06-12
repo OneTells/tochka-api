@@ -34,7 +34,7 @@ async def withdraw(transaction, user_id: UUID4, ticker: str, amount: int):
     )
 
 
-async def execute_order(order: OrderModel):
+async def execute_order(order: OrderModel, order_direction: Direction):
     whereclause = [
         Order.direction != order.direction,
         Order.ticker == order.ticker,
