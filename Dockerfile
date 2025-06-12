@@ -1,7 +1,6 @@
 FROM python:3.13-slim-bookworm AS builder
 
 ENV UV_COMPILE_BYTECODE=1
-
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONOPTIMIZE=2
 
@@ -35,3 +34,5 @@ WORKDIR /app
 COPY ./src .
 
 RUN python -m compileall /app
+
+RUN /app/.venv/bin/gunicorn --version
