@@ -20,7 +20,11 @@ class Order(Base):
     ticker: Mapped[str] = column(Text, ForeignKey(Instrument.ticker, ondelete="CASCADE"), nullable=False)
 
     direction: Mapped[Direction] = column(Enum(Direction), nullable=False)
-    status: Mapped[OrderStatus] = column(Enum(OrderStatus), nullable=False, server_default=text(OrderStatus.NEW))
+    status: Mapped[OrderStatus] = column(
+        Enum(OrderStatus),
+        nullable=False,
+        server_default=text(f"'{OrderStatus.NEW.value}'::orderstatus"),
+    )
 
     qty: Mapped[int] = column(Integer, nullable=False)
     filled: Mapped[int] = column(Integer, nullable=False, server_default=text("0"))

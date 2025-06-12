@@ -64,7 +64,7 @@ async def execute_order(order_id: UUID4, order: LimitOrderBody | MarketOrderBody
     qty = order.qty
     order_filled = 0
 
-    with database.get_transaction() as transaction:
+    async with database.get_transaction() as transaction:
         for opposite_order in opposite_orders:
             if qty == 0:
                 break

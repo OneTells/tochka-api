@@ -28,10 +28,20 @@ async def main():
             pass
 
         try:
-            for table in tables:
-                await connection.execute(compile_table(table))
-        except DuplicateTableError:
+            await connection.execute("CREATE TYPE Direction AS ENUM('BUY', 'SELL');")
+        except DuplicateObjectError:
             pass
+
+        try:
+            await connection.execute("CREATE TYPE OrderStatus AS ENUM('NEW', 'EXECUTED', 'PARTIALLY_EXECUTED', 'CANCELLED');")
+        except DuplicateObjectError:
+            pass
+
+        for table in tables:
+            try:
+                await connection.execute(compile_table(table))
+            except DuplicateTableError:
+                pass
 
         await (
             Insert(Instrument)
