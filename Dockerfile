@@ -20,16 +20,18 @@ RUN apt-get update && \
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
-RUN uv sync --frozen --no-install-project --compile --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --compile --no-dev --no-cache
 
 FROM python:3.13-slim-bookworm AS production
 
-ENV TZ=Europe/Moscow
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONOPTIMIZE=2
 
-COPY --from=builder /app/.venv /venv
+ENV VIRTUAL_ENV=/venv
 ENV PATH="/venv/bin:$PATH"
+
+COPY --from=builder /app/.venv /venv
 
 WORKDIR /app
 COPY ./src .
