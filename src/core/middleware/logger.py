@@ -42,12 +42,12 @@ class LoggerRoute(APIRoute):
             response = await original_route_handler(request)
 
             logger.info(
-                f'Запрос к api. '
+                (f'Запрос к api. '
                 f'Request:'
                 f'scope={request.scope}; '
                 f'Response:'
                 f'status_code={response.status_code}'
-                f'body={response.body})'
+                f'body={response.body})')[:100]
             )
 
             return response
