@@ -1,5 +1,3 @@
-import uuid
-
 from everbase import Select, Insert, Update
 from pydantic import UUID4
 
@@ -13,10 +11,13 @@ from modules.orders.schemes import LimitOrderBody, MarketOrderBody
 
 async def deposit(transaction, user_id: UUID4, ticker: str, amount: int):
     await (
-        Insert(Balance)
-        .values(user_id=user_id, ticker=ticker, amount=amount)
+        (query := (
+            Insert(Balance)
+            .values(user_id=user_id, ticker=ticker, amount=amount)
+        ))
         .on_conflict_do_update(
-            index_elements=(Balance.user_id, Balance.ticker), set_={'amount': Balance.amount + amount}
+            index_elements=(Balance.user_id, Balance.ticker),
+            set_={'amount': Balance.amount + query.excluded.amount}
         )
         .execute(transaction)
     )
