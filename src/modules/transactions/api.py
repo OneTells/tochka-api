@@ -1,6 +1,5 @@
 from everbase import Select
-from fastapi import APIRouter, Query, HTTPException
-from pydantic import Field
+from fastapi import APIRouter, Query, HTTPException, Path
 from sqlalchemy import true
 from sqlalchemy.sql.annotation import Annotated
 
@@ -14,7 +13,7 @@ router = APIRouter()
 
 @router.get("/public/transactions/{ticker}")
 async def get_public_transaction(
-    ticker: Annotated[str, Field(pattern='^[A-Z]{2,10}$')],
+    ticker: Annotated[str, Path(pattern='^[A-Z]{2,10}$')],
     limit: Annotated[int, Query(default=10)]
 ):
     is_instrument_exist = await (
