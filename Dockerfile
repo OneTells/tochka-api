@@ -8,7 +8,6 @@ ARG GIT_TOKEN
 RUN test -n "$GIT_TOKEN" || { echo "GIT_TOKEN не установлен"; exit 1; }
 
 RUN apt-get update
-
 RUN apt-get install -y --no-install-recommends git curl gcc build-essential
 RUN git config --global url."https://oauth2:${GIT_TOKEN}@github.com".insteadOf "https://github.com"
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -38,3 +37,5 @@ WORKDIR /app
 COPY ./src .
 
 RUN python -m compileall /app
+
+entrypoint exec: gunicorn main:app -w 2 -b 0.0.0.0:8000 --timeout 600 -k uvicorn.workers.UvicornWorker --keep-alive 600 --forwarded-allow-ips="172.19.0.3"
