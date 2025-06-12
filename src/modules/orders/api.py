@@ -56,15 +56,15 @@ async def create_order(
         if response is None:
             raise HTTPException(status_code=409, detail="Недостаточно средств")
 
-    order_id: uuid.UUID = await (
+    order_ids: list[uuid.UUID] = await (
         Insert(Order)
         .values(user_id=user_id, ticker=order.ticker, qty=order.qty, price=order.price, direction=order.direction)
         .returning(database, Order.id, model=lambda e: e['id'])
     )
 
-    await execute_order(order_id, order)
+    await execute_order(order_ids[0], order)
 
-    return ORJSONResponse(content={"success": True, 'order_id': order_id})
+    return ORJSONResponse(content={"success": True, 'order_id': order_ids[0]})
 
 
 @router.get("/order")
@@ -117,7 +117,7 @@ async def cancel_order(
         .returning(database, true())
     )
 
-    if response is None:
+    if not response:
         raise HTTPException(status_code=409, detail="Ордер нельзя отменить")
 
     return ORJSONResponse(content={"success": True})

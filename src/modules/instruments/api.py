@@ -27,7 +27,7 @@ async def create_instrument(
         .returning(database, true())
     )
 
-    if response is None:
+    if not response:
         raise HTTPException(status_code=409, detail="Инструмент уже существует")
 
     return ORJSONResponse(content={"success": True})
@@ -54,7 +54,7 @@ async def delete_instrument(
         .returning(database, true())
     )
 
-    if response is None:
+    if not response:
         raise HTTPException(status_code=404, detail="Инструмент не найден")
 
     return ORJSONResponse(content={"success": True})

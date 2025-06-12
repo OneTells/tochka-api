@@ -19,13 +19,13 @@ router = APIRouter()
 
 @router.post('/public/register')
 async def create_user(name: Annotated[str, Body(embed=True)]):
-    response: UserModel = await (
+    response: list[UserModel] = await (
         Insert(User)
         .values(name=name, api_key=f'{uuid.uuid4()}')
         .returning(database, User.id, User.name, User.role, User.api_key, model=UserModel)
     )
 
-    return ORJSONResponse(content=response.model_dump())
+    return ORJSONResponse(content=response[0].model_dump())
 
 
 @router.get('/balance')
@@ -44,16 +44,16 @@ async def delete_user(
     user_id: Annotated[str, Path()],
     _: Annotated[UserModel, Depends(Authentication(user_role=UserRole.ADMIN))]
 ):
-    response: UserModel | None = await (
+    response: list[UserModel] = await (
         Delete(User)
         .where(User.id == user_id)
         .returning(database, User.id, User.name, User.role, User.api_key, model=UserModel)
     )
 
-    if response is None:
+    if not response:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-    return ORJSONResponse(content=response.model_dump())
+    return ORJSONResponse(content=response[0].model_dump())
 
 
 @router.post("/admin/balance/deposit")
@@ -127,7 +127,7 @@ async def withdraw(
         .returning(database, true())
     )
 
-    if response is None:
+    if not response:
         raise HTTPException(status_code=409, detail="Недостаточно средств")
 
     return ORJSONResponse(content={"success": True})
