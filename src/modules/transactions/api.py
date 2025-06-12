@@ -1,7 +1,9 @@
+from typing import Annotated
+
 from everbase import Select
 from fastapi import APIRouter, Query, HTTPException, Path
 from sqlalchemy import true
-from sqlalchemy.sql.annotation import Annotated
+
 
 from core.models.instrument import Instrument
 from core.models.transaction import Transaction
