@@ -61,7 +61,7 @@ services:
     volumes:
       - ./traefik.yaml:/etc/traefik/traefik.yaml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /traefik-public-certificates:/certificates
+      - traefik-certificates:/certificates
     labels:
       - "traefik.enable=true"
     networks:
@@ -78,3 +78,4 @@ networks:
 
 volumes:
   postgres_data:
+  traefik-certificates:
