@@ -24,7 +24,7 @@ router = APIRouter()
 @router.post("/order")
 async def create_order(
     order: Annotated[LimitOrderBody | MarketOrderBody, Body()],
-    user_id: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
+    user: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
     is_instrument_exist = await (
         Select(true())
@@ -40,7 +40,7 @@ async def create_order(
         response = await (
             Select(true())
             .select_from(Balance)
-            .where(Balance.user_id == user_id, Balance.ticker == order.ticker, Balance.amount >= order.qty)
+            .where(Balance.user_id == user.id, Balance.ticker == order.ticker, Balance.amount >= order.qty)
             .fetch_one(database)
         )
 
@@ -50,7 +50,7 @@ async def create_order(
         response = await (
             Select(true())
             .select_from(Balance)
-            .where(Balance.user_id == user_id, Balance.ticker == 'RUB', Balance.amount >= order.qty * order.price)
+            .where(Balance.user_id == user.id, Balance.ticker == 'RUB', Balance.amount >= order.qty * order.price)
             .fetch_one(database)
         )
 
@@ -59,7 +59,7 @@ async def create_order(
 
     order_ids: list[uuid.UUID] = await (
         Insert(Order)
-        .values(user_id=user_id, ticker=order.ticker, qty=order.qty, price=order.price, direction=order.direction)
+        .values(user_id=user.id, ticker=order.ticker, qty=order.qty, price=order.price, direction=order.direction)
         .returning(Order.id)
         .fetch_all(database, model=lambda e: e['id'])
     )
@@ -71,11 +71,11 @@ async def create_order(
 
 @router.get("/order")
 async def get_user_orders(
-    user_id: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
+    user: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
     response = await (
         Select(Order)
-        .where(Order.user_id == user_id, Order.status == OrderStatus.NEW)
+        .where(Order.user_id == user.id, Order.status == OrderStatus.NEW)
         .fetch_all(database)
     )
 
@@ -92,12 +92,12 @@ async def get_user_orders(
 
 @router.get("/order/{order_id}")
 async def get_order(
-    order_id: Annotated[UUID4, Path()],
+    order: Annotated[UUID4, Path()],
     user_id: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
     response = await (
         Select(Order)
-        .where(Order.user_id == user_id, Order.status == OrderStatus.NEW, Order.id == order_id)
+        .where(Order.user_id == user_id, Order.status == OrderStatus.NEW, Order.id == order.id)
         .fetch_one(database)
     )
 
@@ -109,12 +109,12 @@ async def get_order(
 
 @router.delete("/order/{order_id}")
 async def cancel_order(
-    order_id: Annotated[UUID4, Path()],
+    order: Annotated[UUID4, Path()],
     user_id: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
     response = await (
         Update(Order)
-        .where(Order.user_id == user_id, Order.status == OrderStatus.NEW, Order.id == order_id)
+        .where(Order.user_id == user_id, Order.status == OrderStatus.NEW, Order.id == order.id)
         .values(status=OrderStatus.CANCELLED)
         .returning(true())
         .fetch_all(database)
