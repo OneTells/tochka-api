@@ -29,7 +29,7 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-api_router = APIRouter(prefix='/api', route_class=LoggerRoute)
+api_router = APIRouter(prefix='/api')
 api_router.include_router(v1_router)
 
 app.include_router(api_router)

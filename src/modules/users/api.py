@@ -1,14 +1,14 @@
 import uuid
 from typing import Annotated
 
-from everbase import Insert, Select, Delete, Update, compile_query
+from everbase import Insert, Select, Delete, Update
 from fastapi import APIRouter, Body, Depends, Path, HTTPException
 from fastapi.responses import ORJSONResponse
-from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import true
 
 from core.methods.authentication import Authentication
+from core.middleware.logger import LoggerRoute
 from core.models.balance import Balance
 from core.models.instrument import Instrument
 from core.models.user import User
@@ -16,7 +16,7 @@ from core.objects.database import database
 from core.schemes.user import UserRole
 from modules.users.schemes import UserModel
 
-router = APIRouter()
+router = APIRouter(route_class=LoggerRoute)
 
 
 @router.post('/public/register')

@@ -5,12 +5,13 @@ from fastapi import APIRouter, Query, HTTPException, Path
 from fastapi.responses import ORJSONResponse
 from sqlalchemy import true
 
+from core.middleware.logger import LoggerRoute
 from core.models.instrument import Instrument
 from core.models.transaction import Transaction
 from core.objects.database import database
 from modules.transactions.schemes import TransactionsModel
 
-router = APIRouter()
+router = APIRouter(route_class=LoggerRoute)
 
 
 @router.get("/public/transactions/{ticker}")
