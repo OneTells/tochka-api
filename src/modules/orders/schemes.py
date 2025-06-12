@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, UUID4, BeforeValidator
 
 from core.schemes.order import Direction
 
@@ -22,18 +22,18 @@ class MarketOrderBody(BaseModel):
 
 
 class LimitOrderModel(BaseModel):
-    id: uuid.UUID
+    id: Annotated[UUID4, BeforeValidator(lambda v: uuid.UUID(str(v)))]
     status: str
-    user_id: uuid.UUID
+    user_id: Annotated[UUID4, BeforeValidator(lambda v: uuid.UUID(str(v)))]
     timestamp: datetime
     body: LimitOrderBody
     filled: int
 
 
 class MarketOrderModel(BaseModel):
-    id: uuid.UUID
+    id: Annotated[UUID4, BeforeValidator(lambda v: uuid.UUID(str(v)))]
     status: str
-    user_id: uuid.UUID
+    user_id: Annotated[UUID4, BeforeValidator(lambda v: uuid.UUID(str(v)))]
     timestamp: datetime
     body: MarketOrderBody
 

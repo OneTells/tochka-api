@@ -12,8 +12,7 @@ from modules.users.schemes import UserModel
 
 class Authentication:
 
-    def __init__(self, *, is_required: bool = False, user_role: UserRole):
-        self.__is_required = is_required
+    def __init__(self, *, user_role: UserRole):
         self.__user_role = user_role
 
     @staticmethod
@@ -45,10 +44,10 @@ class Authentication:
 
         return user
 
-    async def __call__(self, authorization: Annotated[str, Header()] = None) -> UserModel:
+    async def __call__(self, authorization: Annotated[str, Header()]) -> UserModel:
         user = await self.__get_user(authorization)
 
-        if user is None and self.__is_required:
+        if user is None:
             raise HTTPException(status_code=401, detail="Необходимо авторизоваться")
 
         if self.__user_role == UserRole.ADMIN and user.role != UserRole.ADMIN:

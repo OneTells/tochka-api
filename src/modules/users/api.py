@@ -27,7 +27,6 @@ async def create_user(name: Annotated[str, Body(embed=True)]):
         .returning(database, User.id, User.name, User.role, User.api_key, model=UserModel)
     )
 
-    logger.info(f'Пользователь {response} зарегистрирован')
     return ORJSONResponse(content=response.model_dump())
 
 
