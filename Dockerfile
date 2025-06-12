@@ -20,17 +20,20 @@ RUN apt-get update && \
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
-RUN uv sync --frozen --no-install-project --compile --no-dev
+RUN uv venv -p python3.13
+RUN uv pip install --no-deps -e .
+RUN uv pip install -e .
 
 FROM python:3.13-slim-bookworm AS production
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONOPTIMIZE=2
-ENV PATH="/venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH"
 
-COPY --from=builder /app/.venv /venv
+COPY --from=builder /app/.venv /app/.venv
 
 WORKDIR /app
 COPY ./src .
 
 RUN python -m compileall /app
+RUN /app/.venv/bin/gunicorn --version
