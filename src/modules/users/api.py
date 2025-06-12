@@ -20,10 +20,10 @@ router = APIRouter()
 
 @router.post('/public/register')
 async def create_user(name: Annotated[str, Body(embed=True)]):
-    response: Record = await (
+    response: dict = await (
         Insert(User)
         .values(name=name, api_key=f'{uuid.uuid4()}')
-        .returning(database, User.id, User.name, User.role, User.api_key)
+        .returning(database, User.id, User.name, User.role, User.api_key, model=lambda x : dict(x))
     )
 
     return ORJSONResponse(content=response)
@@ -45,10 +45,10 @@ async def delete_user(
     user_id: Annotated[str, Path()],
     _: Annotated[UserModel, Depends(Authentication(is_required=True, user_role=UserRole.ADMIN))]
 ):
-    response: Record | None = await (
+    response: dict | None = await (
         Delete(User)
         .where(User.id == user_id)
-        .returning(database, User.id, User.name, User.role, User.api_key)
+        .returning(database, User.id, User.name, User.role, User.api_key, model=lambda x : dict(x))
     )
 
     if response is None:

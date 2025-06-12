@@ -13,5 +13,5 @@ class User(Base):
 
     id: Mapped[uuid.UUID] = column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     name: Mapped[str] = column(Text, nullable=False)
-    role: Mapped[UserRole] = column(Enum(UserRole), nullable=False, server_default=text(UserRole.USER))
+    role: Mapped[UserRole] = column(Enum(UserRole), nullable=False, server_default=text(f"'{UserRole.USER.value}'::userrole"))
     api_key: Mapped[str] = column(Text, nullable=False, unique=True)
