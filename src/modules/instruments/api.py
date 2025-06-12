@@ -37,7 +37,7 @@ async def create_instrument(
 async def get_instrument():
     response = await (
         Select(Instrument.ticker, Instrument.name)
-        .fetch(database, model=lambda x : dict(x))
+        .fetch(database, model=lambda x: InstrumentModel(**x).model_dump())
     )
 
     return ORJSONResponse(content=response)
