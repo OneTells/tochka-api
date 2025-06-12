@@ -1,3 +1,5 @@
+import uuid
+
 from everbase import Select, Insert, Update
 from pydantic import UUID4
 
@@ -6,7 +8,7 @@ from core.models.order import Order
 from core.models.transaction import Transaction
 from core.objects.database import database
 from core.schemes.order import Direction, OrderStatus
-from modules.orders.schemes import LimitOrderBody, MarketOrderBody
+from modules.orders.schemes import LimitOrderBody, OrderModel
 
 
 async def deposit(transaction, user_id: UUID4, ticker: str, amount: int):
@@ -32,7 +34,7 @@ async def withdraw(transaction, user_id: UUID4, ticker: str, amount: int):
     )
 
 
-async def execute_order(order_id: UUID4, order: LimitOrderBody | MarketOrderBody):
+async def execute_order(order: OrderModel):
     whereclause = [
         Order.direction != order.direction,
         Order.ticker == order.ticker,
@@ -55,23 +57,29 @@ async def execute_order(order_id: UUID4, order: LimitOrderBody | MarketOrderBody
             order_by.append(Order.price.desc())
 
     opposite_orders = await (
-        Select(Order.id, Order.user_id, Order.price, Order.qty, Order.filled)
+        Select(Order.id, Order.user_id, Order.price, Order.qty, Order.filled, Order.status)
         .where(*whereclause)
         .order_by(*order_by)
-        .fetch_all(database)
+        .fetch_all(database, model=OrderModel)
     )
 
-    qty = order.qty
-    order_filled = 0
+    storage: dict[uuid.UUID, OrderModel] = {order.id: order}
+
+    for order_ in opposite_orders:
+        storage[order_.id] = order_
 
     async with database.get_transaction() as transaction:
-        for opposite_order in opposite_orders:
-            if qty == 0:
+        for opposite_order_ in opposite_orders:
+            opposite_order_id = opposite_order_.id
+
+            if storage[order.id].qty - storage[order.id].filled == 0:
                 break
 
-            execute_qty = min(qty, opposite_order['qty'] - opposite_order['filled'])
-
-            execute_price = opposite_order['price'] or order.price
+            execute_qty = min(
+                storage[order.id].qty - storage[order.id].filled,
+                storage[opposite_order_id].qty - storage[opposite_order_id].filled
+            )
+            execute_price = storage[opposite_order_id].price or order.price
 
             if not execute_price:
                 continue
@@ -82,10 +90,10 @@ async def execute_order(order_id: UUID4, order: LimitOrderBody | MarketOrderBody
                     ticker=order.ticker,
                     amount=execute_qty,
                     price=execute_price,
-                    buyer_user_id=order.user_id if order.direction == Direction.BUY else opposite_order['user_id'],
-                    seller_user_id=opposite_order['user_id'] if order.direction == Direction.BUY else order.user_id,
-                    buyer_order_id=order_id if order.direction == Direction.BUY else opposite_order['id'],
-                    seller_order_id=opposite_order['id'] if order.direction == Direction.BUY else order_id
+                    buyer_user_id=order.user_id if order.direction == Direction.BUY else storage[opposite_order_id].user_id,
+                    seller_user_id=storage[opposite_order_id].user_id if order.direction == Direction.BUY else order.user_id,
+                    buyer_order_id=order.id if order.direction == Direction.BUY else opposite_order_id,
+                    seller_order_id=opposite_order_id if order.direction == Direction.BUY else order.id
                 )
                 .execute(transaction)
             )
@@ -93,37 +101,34 @@ async def execute_order(order_id: UUID4, order: LimitOrderBody | MarketOrderBody
             if order.direction == Direction.BUY:
                 await withdraw(transaction, order.user_id, "RUB", execute_qty * execute_price)
                 await deposit(transaction, order.user_id, order.ticker, execute_qty)
-                await deposit(transaction, opposite_order['user_id'], "RUB", execute_qty * execute_price)
-                await withdraw(transaction, opposite_order['user_id'], order.ticker, execute_qty)
+                await deposit(transaction, storage[opposite_order_id].user_id, "RUB", execute_qty * execute_price)
+                await withdraw(transaction, storage[opposite_order_id].user_id, order.ticker, execute_qty)
             else:
                 await deposit(transaction, order.user_id, "RUB", execute_qty * execute_price)
                 await withdraw(transaction, order.user_id, order.ticker, execute_qty)
-                await withdraw(transaction, opposite_order['user_id'], "RUB", execute_qty * execute_price)
-                await deposit(transaction, opposite_order['user_id'], order.ticker, execute_qty)
+                await withdraw(transaction, storage[opposite_order_id].user_id, "RUB", execute_qty * execute_price)
+                await deposit(transaction, storage[opposite_order_id].user_id, order.ticker, execute_qty)
 
-        order_filled += execute_qty
-        opposite_order['filled'] += execute_qty
+            storage[order.id].filled += execute_qty
+            storage[opposite_order_id].filled += execute_qty
 
-        if opposite_order['filled'] == opposite_order['qty']:
-            opposite_order.status = OrderStatus.EXECUTED
-        else:
-            opposite_order.status = OrderStatus.PARTIALLY_EXECUTED
+            if storage[opposite_order_id].filled == storage[opposite_order_id].qty:
+                storage[opposite_order_id].status = OrderStatus.EXECUTED
+            else:
+                storage[opposite_order_id].status = OrderStatus.PARTIALLY_EXECUTED
 
-        qty -= execute_qty
+        if storage[order.id].qty == storage[order.id].filled:
+            storage[order.id].status = OrderStatus.EXECUTED
+        elif storage[order.id].filled > 0:
+            storage[order.id].status = OrderStatus.PARTIALLY_EXECUTED
 
-        order_status = None
+        for order_id, order_ in storage.items():
+            if order_.status == OrderStatus.NEW:
+                continue
 
-        if qty == 0:
-            order_status = OrderStatus.EXECUTED
-        elif order_filled > 0:
-            order_status = OrderStatus.PARTIALLY_EXECUTED
-
-        if order_status is None:
-            return
-
-        await (
-            Update(Order)
-            .values(status=order_status, filled=order_filled)
-            .where(Order.id == order_id)
-            .execute(transaction)
-        )
+            await (
+                Update(Order)
+                .values(status=order_.status, filled=order_.filled)
+                .where(Order.id == order_.id)
+                .execute(transaction)
+            )

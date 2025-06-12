@@ -45,3 +45,12 @@ class Level(BaseModel):
 class OrderBook(BaseModel):
     bid_levels: list[Level]
     ask_levels: list[Level]
+
+
+class OrderModel(BaseModel):
+    id: Annotated[UUID4, BeforeValidator(lambda v: uuid.UUID(str(v)))]
+    status: OrderStatus
+    user_id: Annotated[UUID4, BeforeValidator(lambda v: uuid.UUID(str(v)))]
+    qty: Annotated[int, Field(ge=1)]
+    filled: Annotated[int, Field(ge=0)]
+    price: Annotated[int | None, Field(gt=0)]

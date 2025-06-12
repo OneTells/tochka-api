@@ -1,4 +1,3 @@
-import uuid
 from typing import Annotated
 
 from everbase import Select, Insert, Update
@@ -15,7 +14,8 @@ from core.objects.database import database
 from core.schemes.order import Direction, OrderStatus
 from core.schemes.user import UserRole
 from modules.orders.methods import execute_order
-from modules.orders.schemes import LimitOrderBody, MarketOrderBody, LimitOrderModel, MarketOrderModel, OrderBook, Level
+from modules.orders.schemes import LimitOrderBody, MarketOrderBody, LimitOrderModel, MarketOrderModel, OrderBook, Level, \
+    OrderModel
 from modules.users.schemes import UserModel
 
 router = APIRouter()
@@ -57,16 +57,16 @@ async def create_order(
         if response is None:
             raise HTTPException(status_code=409, detail="Недостаточно средств")
 
-    order_ids: list[uuid.UUID] = await (
+    orders = await (
         Insert(Order)
         .values(user_id=user.id, ticker=order.ticker, qty=order.qty, price=order.price, direction=order.direction)
-        .returning(Order.id)
-        .fetch_all(database, model=lambda e: e['id'])
+        .returning(Order.id, Order.user_id, Order.price, Order.qty, Order.filled, Order.status)
+        .fetch_all(database, model=OrderModel)
     )
 
-    await execute_order(order_ids[0], order)
+    await execute_order(orders[0])
 
-    return ORJSONResponse(content={"success": True, 'order_id': order_ids[0]})
+    return ORJSONResponse(content={"success": True, 'order_id': orders[0].id})
 
 
 @router.get("/order")
@@ -146,7 +146,7 @@ async def get_order_book(
 
     orders = await (
         Select(Order.price, Order.direction, Order.qty, Order.filled)
-        .where(Order.ticker == ticker, Order.status == OrderStatus.NEW)
+        .where(Order.ticker == ticker, Order.status == OrderStatus.NEW, Order.price.is_not(None))
         .fetch_all(database)
     )
 
