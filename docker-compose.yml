@@ -1,6 +1,9 @@
 services:
   api:
-    build: .
+    build:
+      context: .
+      args:
+        - GIT_TOKEN=${GIT_TOKEN}
     entrypoint: gunicorn main:app -w 2 -b 0.0.0.0:8000 --timeout 600 -k uvicorn.workers.UvicornWorker --keep-alive 600 --forwarded-allow-ips="172.19.0.3"
     volumes:
       - /root/projects/api/logs:/root/memory/logs
