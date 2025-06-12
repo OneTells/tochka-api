@@ -14,9 +14,9 @@ from core.schemes.order import Direction, OrderStatus
 class Order(Base):
     __tablename__ = "orders"
 
-    id: Mapped[uuid.UUID] = column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    id: Mapped[uuid.UUID] = column(UUID(as_uuid=False), primary_key=True, server_default=text("uuid_generate_v4()"))
 
-    user_id: Mapped[uuid.UUID] = column(UUID(as_uuid=True), ForeignKey(User.id, ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[uuid.UUID] = column(UUID(as_uuid=False), ForeignKey(User.id, ondelete="CASCADE"), nullable=False)
     ticker: Mapped[str] = column(Text, ForeignKey(Instrument.ticker, ondelete="CASCADE"), nullable=False)
 
     direction: Mapped[Direction] = column(Enum(Direction), nullable=False)

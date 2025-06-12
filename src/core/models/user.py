@@ -11,7 +11,7 @@ from core.schemes.user import UserRole
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[uuid.UUID] = column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    id: Mapped[uuid.UUID] = column(UUID(as_uuid=False), primary_key=True, server_default=text("uuid_generate_v4()"))
     name: Mapped[str] = column(Text, nullable=False)
     role: Mapped[UserRole] = column(Enum(UserRole), nullable=False, server_default=text(f"'{UserRole.USER.value}'::userrole"))
     api_key: Mapped[str] = column(Text, nullable=False, unique=True)
