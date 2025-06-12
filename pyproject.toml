@@ -9,11 +9,9 @@ dependencies = [
     "gunicorn>=23.0.0",
     "loguru>=0.7.3",
     "orjson>=3.10.18",
-    "pydantic-settings>=2.9.1"
+    "pydantic-settings>=2.9.1",
+    "uvloop>=0.21.0; sys_platform == 'linux'",
 ]
-
-[project.optional-dependencies]
-linux = ["uvloop>=0.21.0,<1.0.0"]
 
 [tool.uv.sources]
 everbase = { git = "https://github.com/OneTells/everbase.git" }
