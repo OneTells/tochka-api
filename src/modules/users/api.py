@@ -5,6 +5,7 @@ from asyncpg import Record
 from everbase import Insert, Select, Delete
 from fastapi import APIRouter, Body, Depends, Path, HTTPException
 from fastapi.responses import ORJSONResponse
+from loguru import logger
 from sqlalchemy import true, Update
 
 from core.methods.authentication import Authentication
@@ -26,6 +27,7 @@ async def create_user(name: Annotated[str, Body(embed=True)]):
         .returning(database, User.id, User.name, User.role, User.api_key, model=UserModel)
     )
 
+    logger.info(f'Пользователь {response} зарегистрирован')
     return ORJSONResponse(content=response.model_dump())
 
 
