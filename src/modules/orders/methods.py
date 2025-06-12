@@ -36,7 +36,7 @@ async def withdraw(transaction, user_id: UUID4, ticker: str, amount: int):
 
 async def execute_order(order: OrderModel, order_direction: Direction):
     whereclause = [
-        Order.direction != order.direction,
+        Order.direction != order_direction,
         Order.ticker == order.ticker,
         Order.status == OrderStatus.NEW
     ]
@@ -44,14 +44,14 @@ async def execute_order(order: OrderModel, order_direction: Direction):
     order_by = []
 
     if isinstance(order, LimitOrderBody):
-        if order.direction == Direction.BUY:
+        if order_direction == Direction.BUY:
             whereclause.append(Order.price <= order.price)
         else:
             whereclause.append(Order.price >= order.price)
 
         order_by.append(Order.price)
     else:
-        if order.direction == Direction.BUY:
+        if order_direction == Direction.BUY:
             order_by.append(Order.price)
         else:
             order_by.append(Order.price.desc())
@@ -90,15 +90,15 @@ async def execute_order(order: OrderModel, order_direction: Direction):
                     ticker=order.ticker,
                     amount=execute_qty,
                     price=execute_price,
-                    buyer_user_id=order.user_id if order.direction == Direction.BUY else storage[opposite_order_id].user_id,
-                    seller_user_id=storage[opposite_order_id].user_id if order.direction == Direction.BUY else order.user_id,
-                    buyer_order_id=order.id if order.direction == Direction.BUY else opposite_order_id,
-                    seller_order_id=opposite_order_id if order.direction == Direction.BUY else order.id
+                    buyer_user_id=order.user_id if order_direction == Direction.BUY else storage[opposite_order_id].user_id,
+                    seller_user_id=storage[opposite_order_id].user_id if order_direction == Direction.BUY else order.user_id,
+                    buyer_order_id=order.id if order_direction == Direction.BUY else opposite_order_id,
+                    seller_order_id=opposite_order_id if order_direction == Direction.BUY else order.id
                 )
                 .execute(transaction)
             )
 
-            if order.direction == Direction.BUY:
+            if order_direction == Direction.BUY:
                 await withdraw(transaction, order.user_id, "RUB", execute_qty * execute_price)
                 await deposit(transaction, order.user_id, order.ticker, execute_qty)
                 await deposit(transaction, storage[opposite_order_id].user_id, "RUB", execute_qty * execute_price)
