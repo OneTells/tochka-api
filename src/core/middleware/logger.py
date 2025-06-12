@@ -1,11 +1,9 @@
 import time
 from typing import Callable, Awaitable
 
-from fastapi.routing import APIRoute
 from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware, _StreamingResponse as StreamingResponse
 from starlette.requests import Request
-from starlette.responses import Response
 
 
 class LoggerMiddleware(BaseHTTPMiddleware):
@@ -32,21 +30,3 @@ class LoggerMiddleware(BaseHTTPMiddleware):
         )
 
         return response
-
-
-class LoggerRoute(APIRoute):
-    def get_route_handler(self) -> Callable:
-        original_route_handler = super().get_route_handler()
-
-        async def custom_route_handler(request: Request) -> Response:
-            response = await original_route_handler(request)
-
-            logger.info(
-                f'Запрос к api. '
-                f'Request(Scope={request.scope}); '
-                f'Response(StatusCode={response.status_code}, Body={response.body})'
-            )
-
-            return response
-
-        return custom_route_handler

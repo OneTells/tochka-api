@@ -7,7 +7,6 @@ from pydantic import UUID4
 from sqlalchemy import true
 
 from core.methods.authentication import Authentication
-from core.middleware.logger import LoggerRoute
 from core.models.balance import Balance
 from core.models.instrument import Instrument
 from core.models.order import Order
@@ -19,7 +18,7 @@ from modules.orders.schemes import LimitOrderBody, MarketOrderBody, LimitOrderMo
     OrderModel
 from modules.users.schemes import UserModel
 
-router = APIRouter(route_class=LoggerRoute)
+router = APIRouter()
 
 
 @router.post("/order")

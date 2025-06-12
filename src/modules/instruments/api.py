@@ -6,14 +6,13 @@ from fastapi.responses import ORJSONResponse
 from sqlalchemy import true
 
 from core.methods.authentication import Authentication
-from core.middleware.logger import LoggerRoute
 from core.models.instrument import Instrument
 from core.objects.database import database
 from core.schemes.user import UserRole
 from modules.instruments.schemes import InstrumentModel
 from modules.users.schemes import UserModel
 
-router = APIRouter(route_class=LoggerRoute)
+router = APIRouter()
 
 
 @router.post('/admin/instrument')
