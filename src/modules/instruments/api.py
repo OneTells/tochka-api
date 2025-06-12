@@ -52,7 +52,7 @@ async def delete_instrument(
     response = await (
         Delete(Instrument)
         .where(Instrument.ticker == ticker)
-        .returning(database, true())
+        .returning(true())
         .fetch_all(database)
     )
 
