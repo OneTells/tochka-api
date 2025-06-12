@@ -47,7 +47,7 @@ class LoggerRoute(APIRoute):
                 f'scope={request.scope}; '
                 f'Response:'
                 f'status_code={response.status_code}'
-                f'body={response.body})')[:100]
+                f'body={response.body})')
             )
 
             return response
