@@ -35,4 +35,4 @@ COPY ./src .
 
 RUN python -m compileall /app
 
-RUN /app/.venv/bin/gunicorn --version
+RUN /app/venv/bin/gunicorn --version
