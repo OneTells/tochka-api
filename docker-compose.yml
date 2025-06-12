@@ -1,0 +1,80 @@
+services:
+  api:
+    build: .
+    entrypoint: gunicorn main:app -w 2 -b 0.0.0.0:8000 --timeout 600 -k uvicorn.workers.UvicornWorker --keep-alive 600 --forwarded-allow-ips="172.19.0.3"
+    volumes:
+      - /root/projects/api/logs:/root/memory/logs
+    expose:
+      - 8000
+    labels:
+      - "traefik.enable=true"
+
+      - "traefik.http.routers.backend.rule=Host(`точка-ремастер.рф`)"
+
+      - "traefik.http.routers.backend.tls=true"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+
+      - "traefik.http.middlewares.compress-middleware.compress=true"
+
+      - "traefik.http.middlewares.retry-middleware.retry.attempts=10"
+      - "traefik.http.middlewares.retry-middleware.retry.initialinterval=1s"
+
+      - "traefik.http.routers.backend.middlewares=compress-middleware,retry-middleware"
+
+      - "traefik.http.routers.www.rule=Host(`www.точка-ремастер.рф`)"
+
+      - "traefik.http.routers.www.tls=true"
+      - "traefik.http.routers.www.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.www.entrypoints=websecure"
+
+      - "traefik.http.middlewares.redirect-to-non-www.redirectregex.regex=^https://www.api.точка-ремастер.рф/(.*)"
+      - "traefik.http.middlewares.redirect-to-non-www.redirectregex.replacement=https://api.точка-ремастер.рф/$${1}"
+      - "traefik.http.middlewares.redirect-to-non-www.redirectregex.permanent=true"
+
+      - "traefik.http.routers.www.middlewares=redirect-to-non-www"
+    stop_grace_period: 1m30s
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: exchange
+      POSTGRES_PASSWORD: exchange
+      POSTGRES_DB: exchange
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U exchange -d exchange"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - default
+
+  traefik:
+    image: traefik:v3.3
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./traefik.yaml:/etc/traefik/traefik.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /traefik-public-certificates:/certificates
+    labels:
+      - "traefik.enable=true"
+    networks:
+      default:
+        ipv4_address: 172.19.0.3
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
+          gateway: 172.19.0.1
+
+volumes:
+  postgres_data:
