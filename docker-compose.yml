@@ -37,6 +37,8 @@ services:
 
       - "traefik.http.routers.www.middlewares=redirect-to-non-www"
     stop_grace_period: 1m30s
+    networks:
+      - default
 
   postgres:
     image: postgres:latest
