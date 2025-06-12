@@ -21,14 +21,14 @@ RUN apt-get update && \
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
-RUN uv sync --frozen --no-install-project --compile --no-dev
+RUN uv sync --frozen --no-install-project --compile --no-dev --extras "linux"
 
 FROM python:3.13-slim-bookworm AS production
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONOPTIMIZE=2
-
 ENV PATH="/venv/bin:$PATH"
+
 COPY --from=builder /app/.venv /venv
 
 WORKDIR /app
