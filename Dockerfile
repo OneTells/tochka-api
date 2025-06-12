@@ -34,5 +34,3 @@ WORKDIR /app
 COPY ./src .
 
 RUN python -m compileall /app
-
-RUN /app/venv/bin/gunicorn --version
