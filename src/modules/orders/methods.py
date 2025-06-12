@@ -34,10 +34,10 @@ async def withdraw(transaction, user_id: UUID4, ticker: str, amount: int):
     )
 
 
-async def execute_order(order: OrderModel, order_direction: Direction):
+async def execute_order(order: OrderModel, order_direction: Direction, order_ticker: str):
     whereclause = [
         Order.direction != order_direction,
-        Order.ticker == order.ticker,
+        Order.ticker == order_ticker,
         Order.status == OrderStatus.NEW
     ]
 
@@ -87,7 +87,7 @@ async def execute_order(order: OrderModel, order_direction: Direction):
             await (
                 Insert(Transaction)
                 .values(
-                    ticker=order.ticker,
+                    ticker=order_ticker,
                     amount=execute_qty,
                     price=execute_price,
                     buyer_user_id=order.user_id if order_direction == Direction.BUY else storage[opposite_order_id].user_id,
@@ -100,14 +100,14 @@ async def execute_order(order: OrderModel, order_direction: Direction):
 
             if order_direction == Direction.BUY:
                 await withdraw(transaction, order.user_id, "RUB", execute_qty * execute_price)
-                await deposit(transaction, order.user_id, order.ticker, execute_qty)
+                await deposit(transaction, order.user_id, order_ticker, execute_qty)
                 await deposit(transaction, storage[opposite_order_id].user_id, "RUB", execute_qty * execute_price)
-                await withdraw(transaction, storage[opposite_order_id].user_id, order.ticker, execute_qty)
+                await withdraw(transaction, storage[opposite_order_id].user_id, order_ticker, execute_qty)
             else:
                 await deposit(transaction, order.user_id, "RUB", execute_qty * execute_price)
-                await withdraw(transaction, order.user_id, order.ticker, execute_qty)
+                await withdraw(transaction, order.user_id, order_ticker, execute_qty)
                 await withdraw(transaction, storage[opposite_order_id].user_id, "RUB", execute_qty * execute_price)
-                await deposit(transaction, storage[opposite_order_id].user_id, order.ticker, execute_qty)
+                await deposit(transaction, storage[opposite_order_id].user_id, order_ticker, execute_qty)
 
             storage[order.id].filled += execute_qty
             storage[opposite_order_id].filled += execute_qty

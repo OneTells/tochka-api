@@ -60,11 +60,11 @@ async def create_order(
     orders = await (
         Insert(Order)
         .values(user_id=user.id, ticker=order.ticker, qty=order.qty, price=order.price, direction=order.direction)
-        .returning(Order.id, Order.user_id, Order.price, Order.qty, Order.filled, Order.status, Order.direction)
-        .fetch_all(database, model=lambda x: (OrderModel(**x), x['direction']))
+        .returning(Order.id, Order.user_id, Order.price, Order.qty, Order.filled, Order.status, Order.direction, Order.ticker)
+        .fetch_all(database, model=lambda x: (OrderModel(**x), x['direction'], x['ticker']))
     )
 
-    await execute_order(orders[0][0], orders[0][1])
+    await execute_order(orders[0][0], orders[0][1], orders[0][2])
 
     return ORJSONResponse(content={"success": True, 'order_id': orders[0][0].id})
 
@@ -154,9 +154,6 @@ async def get_order_book(
     asks: dict[int, int] = {}
 
     for order in orders:
-        if not order['price']:
-            continue
-
         if order['direction'] == Direction.BUY:
             bids[order['price']] = bids.get(order['price'], 0) + (order['qty'] - order['filled'])
         else:
