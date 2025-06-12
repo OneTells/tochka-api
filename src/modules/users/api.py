@@ -1,9 +1,10 @@
 import uuid
 from typing import Annotated
 
-from everbase import Insert, Select, Delete, Update
+from everbase import Insert, Select, Delete, Update, compile_query
 from fastapi import APIRouter, Body, Depends, Path, HTTPException
 from fastapi.responses import ORJSONResponse
+from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import true
 
@@ -86,9 +87,17 @@ async def deposit(
     if is_instrument_exist is None:
         raise HTTPException(status_code=404, detail="Инструмент не найден")
 
+    logger.info(
+        compile_query(
+            Insert(Balance)
+            .values(user_id=user_id, ticker=ticker, amount=amount)
+            .on_conflict_do_update(index_elements=(Balance.user_id, Balance.ticker), set_={'amount': Balance.amount + amount})
+        )
+    )
+
     await (
         Insert(Balance)
-        .values(user_id=str(user_id), ticker=ticker, amount=amount)
+        .values(user_id=user_id, ticker=ticker, amount=amount)
         .on_conflict_do_update(index_elements=(Balance.user_id, Balance.ticker), set_={'amount': Balance.amount + amount})
         .execute(database)
     )
