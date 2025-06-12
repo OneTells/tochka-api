@@ -21,7 +21,7 @@ RUN apt-get update && \
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
-RUN uv sync --frozen --no-install-project --compile --no-dev --extras "linux"
+RUN uv sync --frozen --no-install-project --compile --no-dev
 
 FROM python:3.13-slim-bookworm AS production
 
