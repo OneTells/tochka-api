@@ -23,7 +23,7 @@ router = APIRouter()
 @router.post("/order")
 async def create_order(
     order: Annotated[LimitOrderBody | MarketOrderBody, Body()],
-    user_id: Annotated[UserModel, Depends(Authentication(is_required=True, user_role=UserRole.USER))]
+    user_id: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
     is_instrument_exist = await (
         Select(true())
@@ -69,7 +69,7 @@ async def create_order(
 
 @router.get("/order")
 async def get_user_orders(
-    user_id: Annotated[UserModel, Depends(Authentication(is_required=True, user_role=UserRole.USER))]
+    user_id: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
     response = await (
         Select(Order)
@@ -91,7 +91,7 @@ async def get_user_orders(
 @router.get("/order/{order_id}")
 async def get_order(
     order_id: Annotated[uuid.UUID, Path()],
-    user_id: Annotated[UserModel, Depends(Authentication(is_required=True, user_role=UserRole.USER))]
+    user_id: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
     response = await (
         Select(Order)
@@ -108,7 +108,7 @@ async def get_order(
 @router.delete("/order/{order_id}")
 async def cancel_order(
     order_id: Annotated[uuid.UUID, Path()],
-    user_id: Annotated[UserModel, Depends(Authentication(is_required=True, user_role=UserRole.USER))]
+    user_id: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
     response = await (
         Update(Order)

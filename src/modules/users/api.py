@@ -31,7 +31,7 @@ async def create_user(name: Annotated[str, Body(embed=True)]):
 
 
 @router.get('/balance')
-async def get_user_balance(user: Annotated[UserModel, Depends(Authentication(is_required=True, user_role=UserRole.USER))]):
+async def get_user_balance(user: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]):
     user_balances = await (
         Select(Balance.ticker, Balance.amount)
         .where(Balance.user_id == user.id)
@@ -44,7 +44,7 @@ async def get_user_balance(user: Annotated[UserModel, Depends(Authentication(is_
 @router.delete('/admin/user/{user_id}')
 async def delete_user(
     user_id: Annotated[str, Path()],
-    _: Annotated[UserModel, Depends(Authentication(is_required=True, user_role=UserRole.ADMIN))]
+    _: Annotated[UserModel, Depends(Authentication(user_role=UserRole.ADMIN))]
 ):
     response: UserModel | None = await (
         Delete(User)
@@ -63,7 +63,7 @@ async def deposit(
     user_id: Annotated[str, Body()],
     ticker: Annotated[str, Body()],
     amount: Annotated[int, Body(min=1)],
-    _: Annotated[UserModel, Depends(Authentication(is_required=True, user_role=UserRole.ADMIN))]
+    _: Annotated[UserModel, Depends(Authentication(user_role=UserRole.ADMIN))]
 ):
     is_user_exist = await (
         Select(true())
@@ -100,7 +100,7 @@ async def withdraw(
     user_id: Annotated[str, Body()],
     ticker: Annotated[str, Body()],
     amount: Annotated[int, Body(min=1)],
-    _: Annotated[UserModel, Depends(Authentication(is_required=True, user_role=UserRole.ADMIN))]
+    _: Annotated[UserModel, Depends(Authentication(user_role=UserRole.ADMIN))]
 ):
     is_user_exist = await (
         Select(true())

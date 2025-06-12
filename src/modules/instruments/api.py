@@ -18,7 +18,7 @@ router = APIRouter()
 @router.post('/admin/instrument')
 async def create_instrument(
     instrument: Annotated[InstrumentModel, Body()],
-    _: Annotated[UserModel, Depends(Authentication(is_required=True, user_role=UserRole.ADMIN))]
+    _: Annotated[UserModel, Depends(Authentication(user_role=UserRole.ADMIN))]
 ):
     response = await (
         Insert(Instrument)
@@ -46,7 +46,7 @@ async def get_instrument():
 @router.delete('/admin/instrument/{ticker}')
 async def delete_instrument(
     ticker: Annotated[str, Path()],
-    _: Annotated[UserModel, Depends(Authentication(is_required=True, user_role=UserRole.ADMIN))]
+    _: Annotated[UserModel, Depends(Authentication(user_role=UserRole.ADMIN))]
 ):
     response = await (
         Delete(Instrument)
