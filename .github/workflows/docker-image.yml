@@ -13,6 +13,9 @@ jobs:
 
     env:
       GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
+      database__user: ${{ secrets.database__user }}
+      database__password: ${{ secrets.database__password }}
+      database__name: ${{ secrets.database__name }}
       DOCKER_BUILDKIT: 1
 
     steps:
@@ -21,10 +24,10 @@ jobs:
       - name: Make envfile
         uses: SpicyPizza/create-envfile@v2.0
         with:
-          envkey_database__user: exchange
-          envkey_database__password: exchange
+          envkey_database__user: ${{ secrets.database__user }}
+          envkey_database__password: ${{ secrets.database__password }}
           envkey_database__host: postgres
-          envkey_database__name: exchange
+          envkey_database__name: ${{ secrets.database__name }}
           envkey_database__port: 5432
 
           directory: src

@@ -43,9 +43,9 @@ services:
   postgres:
     image: postgres:latest
     environment:
-      POSTGRES_USER: exchange
-      POSTGRES_PASSWORD: exchange
-      POSTGRES_DB: exchange
+      POSTGRES_USER: ${database__user}
+      POSTGRES_PASSWORD: ${database__password}
+      POSTGRES_DB: ${database__name}
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     ports:
