@@ -1,10 +1,10 @@
 import uuid
 from typing import Annotated
 
-from everbase import Insert, Select, Delete, compile_query, Update
+from everbase import Insert, Select, Delete, Update
 from fastapi import APIRouter, Body, Depends, Path, HTTPException
 from fastapi.responses import ORJSONResponse
-from loguru import logger
+from pydantic import UUID4
 from sqlalchemy import true
 
 from core.methods.authentication import Authentication
@@ -19,7 +19,7 @@ router = APIRouter()
 
 
 @router.post('/public/register')
-async def create_user(name: Annotated[str, Body(embed=True)]):
+async def create_user(name: Annotated[str, Body(embed=True, min_length=3)]):
     response = await (
         Insert(User)
         .values(name=name, api_key=f'{uuid.uuid4()}')
@@ -43,17 +43,9 @@ async def get_user_balance(user: Annotated[UserModel, Depends(Authentication(use
 
 @router.delete('/admin/user/{user_id}')
 async def delete_user(
-    user_id: Annotated[str, Path()],
+    user_id: Annotated[UUID4, Path()],
     _: Annotated[UserModel, Depends(Authentication(user_role=UserRole.ADMIN))]
 ):
-    logger.info(
-        compile_query(
-            Delete(User)
-            .where(User.id == user_id)
-            .returning(User.id, User.name, User.role, User.api_key)
-        )
-    )
-
     response = await (
         Delete(User)
         .where(User.id == user_id)
@@ -69,9 +61,9 @@ async def delete_user(
 
 @router.post("/admin/balance/deposit")
 async def deposit(
-    user_id: Annotated[str, Body()],
-    ticker: Annotated[str, Body()],
-    amount: Annotated[int, Body(min=1)],
+    user_id: Annotated[UUID4, Body()],
+    ticker: Annotated[str, Body(pattern='^[A-Z]{2,10}$')],
+    amount: Annotated[int, Body(gt=0)],
     _: Annotated[UserModel, Depends(Authentication(user_role=UserRole.ADMIN))]
 ):
     is_user_exist = await (
@@ -106,9 +98,9 @@ async def deposit(
 
 @router.post("/admin/balance/withdraw")
 async def withdraw(
-    user_id: Annotated[str, Body()],
-    ticker: Annotated[str, Body()],
-    amount: Annotated[int, Body(min=1)],
+    user_id: Annotated[UUID4, Body()],
+    ticker: Annotated[str, Body(pattern='^[A-Z]{2,10}$')],
+    amount: Annotated[int, Body(gt=0)],
     _: Annotated[UserModel, Depends(Authentication(user_role=UserRole.ADMIN))]
 ):
     is_user_exist = await (

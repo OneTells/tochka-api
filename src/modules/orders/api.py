@@ -2,8 +2,9 @@ import uuid
 from typing import Annotated
 
 from everbase import Select, Insert, Update
-from fastapi import APIRouter, Depends, HTTPException, Body, Path
+from fastapi import APIRouter, Depends, HTTPException, Body, Path, Query
 from fastapi.responses import ORJSONResponse
+from pydantic import UUID4, Field
 from sqlalchemy import true
 
 from core.methods.authentication import Authentication
@@ -14,7 +15,7 @@ from core.objects.database import database
 from core.schemes.order import Direction, OrderStatus
 from core.schemes.user import UserRole
 from modules.orders.methods import execute_order
-from modules.orders.schemes import LimitOrderBody, MarketOrderBody, LimitOrderModel, MarketOrderModel
+from modules.orders.schemes import LimitOrderBody, MarketOrderBody, LimitOrderModel, MarketOrderModel, OrderBook, Level
 from modules.users.schemes import UserModel
 
 router = APIRouter()
@@ -91,7 +92,7 @@ async def get_user_orders(
 
 @router.get("/order/{order_id}")
 async def get_order(
-    order_id: Annotated[uuid.UUID, Path()],
+    order_id: Annotated[UUID4, Path()],
     user_id: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
     response = await (
@@ -108,7 +109,7 @@ async def get_order(
 
 @router.delete("/order/{order_id}")
 async def cancel_order(
-    order_id: Annotated[uuid.UUID, Path()],
+    order_id: Annotated[UUID4, Path()],
     user_id: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
     response = await (
@@ -123,3 +124,42 @@ async def cancel_order(
         raise HTTPException(status_code=409, detail="Ордер нельзя отменить")
 
     return ORJSONResponse(content={"success": True})
+
+
+@router.get('/public/orderbook/{ticker}')
+async def get_order_book(
+    ticker: Annotated[str, Field(pattern='^[A-Z]{2,10}$')],
+    limit: Annotated[int, Query(default=10)]
+):
+    is_instrument_exist = await (
+        Select(true())
+        .select_from(Instrument)
+        .where(Instrument.ticker == ticker)
+        .fetch_one(database)
+    )
+
+    if is_instrument_exist is None:
+        raise HTTPException(status_code=404, detail="Инструмент не найден")
+
+    orders = await (
+        Select(Order.price, Order.direction, Order.qty, Order.filled)
+        .where(Order.ticker == ticker, Order.status == OrderStatus.NEW)
+        .fetch_all(database)
+    )
+
+    bids: dict[int, int] = {}
+    asks: dict[int, int] = {}
+
+    for order in orders:
+        if not order['price']:
+            continue
+
+        if order['direction'] == Direction.BUY:
+            bids[order['price']] = bids.get(order['price'], 0) + (order['qty'] - order['filled'])
+        else:
+            asks[order['price']] = asks.get(order['price'], 0) + (order['qty'] - order['filled'])
+
+    return OrderBook(
+        bid_levels=[Level(price=price, qty=qty) for price, qty in sorted(bids.items(), reverse=True)[:limit]],
+        ask_levels=[Level(price=price, qty=qty) for price, qty in sorted(asks.items())[:limit]]
+    )

@@ -63,8 +63,8 @@ wheels = [
 
 [[package]]
 name = "everbase"
-version = "2.2.5"
-source = { git = "https://github.com/OneTells/everbase.git#17d0a84efb821ce15e3685c7b6ab40a049c06cdc" }
+version = "2.2.6"
+source = { git = "https://github.com/OneTells/everbase.git#676e4f01eec243e09d6f94b1ea78b16f69c37efb" }
 dependencies = [
     { name = "asyncpg" },
     { name = "loguru" },

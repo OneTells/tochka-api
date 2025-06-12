@@ -1,9 +1,7 @@
 import asyncio
 
 from asyncpg import DuplicateObjectError, DuplicateTableError
-from everbase import compile_table
-from sqlalchemy.dialects.postgresql import dialect
-from sqlalchemy.sql.sqltypes import Enum
+from everbase import compile_table, Insert
 
 from core.models.balance import Balance
 from core.models.instrument import Instrument
@@ -11,7 +9,6 @@ from core.models.order import Order
 from core.models.transaction import Transaction
 from core.models.user import User
 from core.objects.database import database
-from core.schemes.user import UserRole
 
 
 async def main():
@@ -35,6 +32,13 @@ async def main():
                 await connection.execute(compile_table(table))
         except DuplicateTableError:
             pass
+
+        await (
+            Insert(Instrument)
+            .values(ticker='RUB', name='Российский рубль')
+            .on_conflict_do_nothing()
+            .fetch_all(connection)
+        )
 
     await database.close()
 

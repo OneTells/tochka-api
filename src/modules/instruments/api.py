@@ -35,7 +35,7 @@ async def create_instrument(
 
 
 @router.get('/public/instrument')
-async def get_instrument():
+async def get_instruments():
     response = await (
         Select(Instrument.ticker, Instrument.name)
         .fetch_all(database, model=lambda x: InstrumentModel(**x).model_dump())
@@ -46,7 +46,7 @@ async def get_instrument():
 
 @router.delete('/admin/instrument/{ticker}')
 async def delete_instrument(
-    ticker: Annotated[str, Path()],
+    ticker: Annotated[str, Path(pattern='^[A-Z]{2,10}$')],
     _: Annotated[UserModel, Depends(Authentication(user_role=UserRole.ADMIN))]
 ):
     response = await (

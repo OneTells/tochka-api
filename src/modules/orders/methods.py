@@ -1,6 +1,7 @@
 import uuid
 
 from everbase import Select, Insert, Update
+from pydantic import UUID4
 
 from core.models.balance import Balance
 from core.models.order import Order
@@ -10,7 +11,7 @@ from core.schemes.order import Direction, OrderStatus
 from modules.orders.schemes import LimitOrderBody, MarketOrderBody
 
 
-async def deposit(transaction, user_id: uuid.UUID, ticker: str, amount: int):
+async def deposit(transaction, user_id: UUID4, ticker: str, amount: int):
     await (
         Insert(Balance)
         .values(user_id=user_id, ticker=ticker, amount=amount)
@@ -21,7 +22,7 @@ async def deposit(transaction, user_id: uuid.UUID, ticker: str, amount: int):
     )
 
 
-async def withdraw(transaction, user_id: uuid.UUID, ticker: str, amount: int):
+async def withdraw(transaction, user_id: UUID4, ticker: str, amount: int):
     await (
         Update(Balance)
         .values(amount=Balance.amount - amount)
@@ -30,7 +31,7 @@ async def withdraw(transaction, user_id: uuid.UUID, ticker: str, amount: int):
     )
 
 
-async def execute_order(order_id: uuid.UUID, order: LimitOrderBody | MarketOrderBody):
+async def execute_order(order_id: UUID4, order: LimitOrderBody | MarketOrderBody):
     whereclause = [
         Order.direction != order.direction,
         Order.ticker == order.ticker,
