@@ -44,7 +44,7 @@ class LoggerRoute(APIRoute):
             logger.info(
                 f'Запрос к api. '
                 f'Request(Scope={request.scope}); '
-                f'Response(Status_code={response.status_code}, Body={response.body})'
+                f'Response(StatusCode={response.status_code}, Body={response.body})'
             )
 
             return response
