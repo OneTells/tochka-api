@@ -93,11 +93,11 @@ async def get_user_orders(
 @router.get("/order/{order_id}")
 async def get_order(
     order_id: Annotated[UUID4, Path()],
-    user_id: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
+    user: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
     response = await (
         Select(Order)
-        .where(Order.user_id == user_id, Order.status == OrderStatus.NEW, Order.id == order_id)
+        .where(Order.user_id == user.id, Order.status == OrderStatus.NEW, Order.id == order_id)
         .fetch_one(database)
     )
 
@@ -110,11 +110,11 @@ async def get_order(
 @router.delete("/order/{order_id}")
 async def cancel_order(
     order_id: Annotated[UUID4, Path()],
-    user_id: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
+    user: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
     response = await (
         Update(Order)
-        .where(Order.user_id == user_id, Order.status == OrderStatus.NEW, Order.id == order_id)
+        .where(Order.user_id == user.id, Order.status == OrderStatus.NEW, Order.id == order_id)
         .values(status=OrderStatus.CANCELLED)
         .returning(true())
         .fetch_all(database)
