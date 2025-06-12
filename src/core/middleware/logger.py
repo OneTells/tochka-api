@@ -40,7 +40,7 @@ class LoggerRoute(APIRoute):
 
         async def custom_route_handler(request: Request) -> Response:
             response = await original_route_handler(request)
-
+            raise ValueError()
             logger.info(
                 (f'Запрос к api. '
                 f'Request:'
