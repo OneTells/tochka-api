@@ -13,7 +13,6 @@ class Balance(Base):
     __tablename__ = "balances"
 
     user_id: Mapped[uuid.UUID] = column(UUID(as_uuid=True), ForeignKey(User.id, ondelete="CASCADE"))
-    
     ticker: Mapped[str] = column(Text, ForeignKey(Instrument.ticker, ondelete="CASCADE"), nullable=False)
     amount: Mapped[int] = column(Integer, nullable=False, server_default=text("0"))
 

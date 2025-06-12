@@ -88,7 +88,7 @@ async def deposit(
 
     await (
         Insert(Balance)
-        .values(user_id=user_id, ticker=ticker, amount=amount)
+        .values(user_id=str(user_id), ticker=ticker, amount=amount)
         .on_conflict_do_update(index_elements=(Balance.user_id, Balance.ticker), set_={'amount': Balance.amount + amount})
         .execute(database)
     )

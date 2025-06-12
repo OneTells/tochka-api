@@ -4,7 +4,7 @@ from typing import Annotated
 from everbase import Select, Insert, Update
 from fastapi import APIRouter, Depends, HTTPException, Body, Path, Query
 from fastapi.responses import ORJSONResponse
-from pydantic import UUID4, Field
+from pydantic import UUID4
 from sqlalchemy import true
 
 from core.methods.authentication import Authentication
