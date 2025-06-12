@@ -2,12 +2,16 @@ import uuid
 from typing import Annotated
 
 from everbase import Select
-from fastapi import Header, HTTPException
+from fastapi import HTTPException
+from fastapi.params import Depends
+from fastapi.security import APIKeyHeader
 
 from core.models.user import User
 from core.objects.database import database
 from core.schemes.user import UserRole
 from modules.users.schemes import UserModel
+
+authorization_header = APIKeyHeader(name="authorization")
 
 
 class Authentication:
@@ -41,16 +45,11 @@ class Authentication:
 
         return user
 
-    async def __call__(
-        self,
-        authorization: Annotated[str | None, Header(default=None)],
-        token: Annotated[str | None, Header(default=None)]
-    ) -> UserModel:
-
-        if token is None and authorization is None:
+    async def __call__(self, authorization: Annotated[str, Depends(authorization_header)]) -> UserModel:
+        if authorization is None:
             raise HTTPException(status_code=401, detail="Необходимо авторизоваться")
 
-        user = await self.__get_user(authorization or token)
+        user = await self.__get_user(authorization)
 
         if self.__user_role == UserRole.ADMIN and user.role != UserRole.ADMIN:
             raise HTTPException(status_code=403, detail="Не достаточно прав")
