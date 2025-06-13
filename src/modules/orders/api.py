@@ -104,7 +104,7 @@ async def get_order(
 ):
     response = await (
         Select(Order)
-        .where(Order.user_id == user.id, Order.status == OrderStatus.NEW, Order.id == order_id)
+        .where(Order.user_id == user.id, Order.id == order_id)
         .fetch_one(database)
     )
 

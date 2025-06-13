@@ -56,19 +56,6 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
 
         order_by.append(Order.price.desc())
 
-    # if isinstance(order, LimitOrderBody):
-    #     if order_direction == Direction.BUY:
-    #         whereclause.append(Order.price <= order.price)
-    #     else:
-    #         whereclause.append(Order.price >= order.price)
-    #
-    #     order_by.append(Order.price)
-    # else:
-    #     if order_direction == Direction.BUY:
-    #         order_by.append(Order.price)
-    #     else:
-    #         order_by.append(Order.price.desc())
-
     opposite_orders = await (
         Select(Order.id, Order.user_id, Order.price, Order.qty, Order.filled, Order.status)
         .where(*whereclause)
