@@ -157,7 +157,7 @@ async def cancel_order(
 ):
     async with database.get_connection() as connection:
         order = await (
-            Select(Order.id, Order.status, Order.ticker, Order.direction, Order.price, Order.qty)
+            Select(true())
             .where(
                 ((Order.user_id == user.id) if user.role == UserRole.USER else True),
                 Order.id == order_id,
@@ -169,15 +169,12 @@ async def cancel_order(
         if order is None:
             raise HTTPException(status_code=409, detail="Ордер нельзя отменить")
 
-        unfilled_qty = order['qty'] - order['filled']
-
         await (
             Update(Order)
             .where(Order.id == order_id)
             .values(status=OrderStatus.CANCELLED)
             .fetch_one(connection)
         )
-
 
     return ORJSONResponse(content={"success": True})
 
