@@ -26,51 +26,52 @@ async def create_order(
     order: Annotated[LimitOrderBody | MarketOrderBody, Body()],
     user: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
-    is_instrument_exist = await (
-        Select(true())
-        .select_from(Instrument)
-        .where(Instrument.ticker == order.ticker)
-        .fetch_one(database)
-    )
-
-    if is_instrument_exist is None:
-        raise HTTPException(status_code=404, detail="Инструмент не найден")
-
-    if order.direction == Direction.SELL:
-        response = await (
+    async with database.get_connection() as connection:
+        is_instrument_exist = await (
             Select(true())
-            .select_from(Balance)
-            .where(Balance.user_id == user.id, Balance.ticker == order.ticker, Balance.amount >= order.qty)
-            .fetch_one(database)
+            .select_from(Instrument)
+            .where(Instrument.ticker == order.ticker)
+            .fetch_one(connection)
         )
 
-        if response is None:
-            raise HTTPException(status_code=409, detail="Недостаточно средств")
-    elif isinstance(order, LimitOrderBody):
-        response = await (
-            Select(true())
-            .select_from(Balance)
-            .where(Balance.user_id == user.id, Balance.ticker == 'RUB', Balance.amount >= order.qty * order.price)
-            .fetch_one(database)
+        if is_instrument_exist is None:
+            raise HTTPException(status_code=404, detail="Инструмент не найден")
+
+        if order.direction == Direction.SELL:
+            response = await (
+                Select(true())
+                .select_from(Balance)
+                .where(Balance.user_id == user.id, Balance.ticker == order.ticker, Balance.amount >= order.qty)
+                .fetch_one(connection)
+            )
+
+            if response is None:
+                raise HTTPException(status_code=409, detail="Недостаточно средств")
+        elif isinstance(order, LimitOrderBody):
+            response = await (
+                Select(true())
+                .select_from(Balance)
+                .where(Balance.user_id == user.id, Balance.ticker == 'RUB', Balance.amount >= order.qty * order.price)
+                .fetch_one(connection)
+            )
+
+            if response is None:
+                raise HTTPException(status_code=409, detail="Недостаточно средств")
+
+        orders = await (
+            Insert(Order)
+            .values(
+                user_id=user.id,
+                ticker=order.ticker,
+                qty=order.qty,
+                price=(order.price if isinstance(order, LimitOrderBody) else None),
+                direction=order.direction
+            )
+            .returning(Order.id, Order.user_id, Order.price, Order.qty, Order.filled, Order.status, Order.direction, Order.ticker)
+            .fetch_all(connection, model=lambda x: (OrderModel(**x), x['direction'], x['ticker']))
         )
 
-        if response is None:
-            raise HTTPException(status_code=409, detail="Недостаточно средств")
-
-    orders = await (
-        Insert(Order)
-        .values(
-            user_id=user.id,
-            ticker=order.ticker,
-            qty=order.qty,
-            price=(order.price if isinstance(order, LimitOrderBody) else None),
-            direction=order.direction
-        )
-        .returning(Order.id, Order.user_id, Order.price, Order.qty, Order.filled, Order.status, Order.direction, Order.ticker)
-        .fetch_all(database, model=lambda x: (OrderModel(**x), x['direction'], x['ticker']))
-    )
-
-    await execute_order(orders[0][0], orders[0][1], orders[0][2])
+        await execute_order(connection, orders[0][0], orders[0][1], orders[0][2])
 
     return ORJSONResponse(content={"success": True, 'order_id': orders[0][0].id})
 

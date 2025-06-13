@@ -1,13 +1,12 @@
 import uuid
 
+from asyncpg import Connection
 from everbase import Select, Insert, Update
-from everbase.pool import Connection
 from pydantic import UUID4
 
 from core.models.balance import Balance
 from core.models.order import Order
 from core.models.transaction import Transaction
-from core.objects.database import database
 from core.schemes.order import Direction, OrderStatus
 from modules.orders.schemes import LimitOrderBody, OrderModel
 
@@ -26,7 +25,7 @@ async def deposit(transaction: Connection, user_id: UUID4, ticker: str, amount: 
     )
 
 
-async def withdraw(transaction, user_id: UUID4, ticker: str, amount: int):
+async def withdraw(transaction: Connection, user_id: UUID4, ticker: str, amount: int):
     await (
         Update(Balance)
         .values(amount=Balance.amount - amount)
@@ -35,11 +34,12 @@ async def withdraw(transaction, user_id: UUID4, ticker: str, amount: int):
     )
 
 
-async def execute_order(order: OrderModel, order_direction: Direction, order_ticker: str):
+async def execute_order(connection: Connection, order: OrderModel, order_direction: Direction, order_ticker: str):
     whereclause = [
         Order.direction != order_direction,
         Order.ticker == order_ticker,
-        Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED])
+        Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED]),
+        Order.price.is_not(None)
     ]
 
     order_by = []
@@ -59,7 +59,7 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
         Select(Order.id, Order.user_id, Order.price, Order.qty, Order.filled, Order.status)
         .where(*whereclause)
         .order_by(*order_by, Order.timestamp.asc())
-        .fetch_all(database, model=OrderModel)
+        .fetch_all(connection, model=OrderModel)
     )
 
     storage: dict[uuid.UUID, OrderModel] = {order.id: order}
@@ -68,16 +68,16 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
         storage[order_.id] = order_
 
     try:
-        async with database.get_transaction() as transaction:
+        async with connection.transaction():
             user_ids = sorted({order.user_id, *(opp_order.user_id for opp_order in opposite_orders)})
 
             for user_id in user_ids:
-                await transaction.execute(
+                await connection.execute(
                     "SELECT 1 FROM balances WHERE user_id = $1 AND ticker = 'RUB' FOR UPDATE", user_id
                 )
 
                 if order_ticker != 'RUB':
-                    await transaction.execute(
+                    await connection.execute(
                         "SELECT 1 FROM balances WHERE user_id = $1 AND ticker = $2 FOR UPDATE",
                         user_id, order_ticker
                     )
@@ -88,10 +88,10 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
 
                 opposite_order_id = opposite_order_.id
 
-                execute_price = storage[opposite_order_id].price or order.price
+                execute_price = storage[opposite_order_id].price
 
                 if not execute_price:
-                    continue
+                    raise ValueError("execute_price is None")
 
                 execute_qty = min(
                     storage[order.id].qty - storage[order.id].filled,
@@ -109,21 +109,21 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
                         buyer_order_id=order.id if order_direction == Direction.BUY else opposite_order_id,
                         seller_order_id=opposite_order_id if order_direction == Direction.BUY else order.id
                     )
-                    .execute(transaction)
+                    .execute(connection)
                 )
 
                 if order_direction == Direction.BUY:
-                    await withdraw(transaction, order.user_id, "RUB", execute_qty * execute_price)
-                    await withdraw(transaction, storage[opposite_order_id].user_id, order_ticker, execute_qty)
+                    await withdraw(connection, order.user_id, "RUB", execute_qty * execute_price)
+                    await withdraw(connection, storage[opposite_order_id].user_id, order_ticker, execute_qty)
 
-                    await deposit(transaction, order.user_id, order_ticker, execute_qty)
-                    await deposit(transaction, storage[opposite_order_id].user_id, "RUB", execute_qty * execute_price)
+                    await deposit(connection, order.user_id, order_ticker, execute_qty)
+                    await deposit(connection, storage[opposite_order_id].user_id, "RUB", execute_qty * execute_price)
                 else:
-                    await withdraw(transaction, order.user_id, order_ticker, execute_qty)
-                    await withdraw(transaction, storage[opposite_order_id].user_id, "RUB", execute_qty * execute_price)
+                    await withdraw(connection, order.user_id, order_ticker, execute_qty)
+                    await withdraw(connection, storage[opposite_order_id].user_id, "RUB", execute_qty * execute_price)
 
-                    await deposit(transaction, order.user_id, "RUB", execute_qty * execute_price)
-                    await deposit(transaction, storage[opposite_order_id].user_id, order_ticker, execute_qty)
+                    await deposit(connection, order.user_id, "RUB", execute_qty * execute_price)
+                    await deposit(connection, storage[opposite_order_id].user_id, order_ticker, execute_qty)
 
                 storage[order.id].filled += execute_qty
                 storage[opposite_order_id].filled += execute_qty
@@ -149,12 +149,12 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
                     Update(Order)
                     .values(status=order_.status, filled=order_.filled)
                     .where(Order.id == order_.id)
-                    .execute(transaction)
+                    .execute(connection)
                 )
     except ValueError:
         await (
             Update(Order)
             .values(status=OrderStatus.CANCELLED)
             .where(Order.id == order.id)
-            .execute(database)
+            .execute(connection)
         )
