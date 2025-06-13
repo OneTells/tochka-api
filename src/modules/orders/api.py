@@ -3,7 +3,6 @@ from typing import Annotated
 from everbase import Select, Insert, Update
 from fastapi import APIRouter, Depends, HTTPException, Body, Path, Query
 from fastapi.responses import ORJSONResponse
-from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import true, func
 
@@ -82,7 +81,7 @@ async def get_user_orders(
 ):
     response = await (
         Select(Order)
-        .where(Order.user_id == user.id)
+        .where(Order.user_id == user.id, Order.status != OrderStatus.CANCELLED)
         .fetch_all(database)
     )
 
@@ -104,7 +103,7 @@ async def get_order(
 ):
     response = await (
         Select(Order)
-        .where(Order.user_id == user.id, Order.id == order_id)
+        .where(Order.user_id == user.id, Order.id == order_id, Order.status != OrderStatus.CANCELLED)
         .fetch_one(database)
     )
 
@@ -150,25 +149,6 @@ async def get_order_book(
 
     if is_instrument_exist is None:
         raise HTTPException(status_code=404, detail="Инструмент не найден")
-
-    # orders = await (
-    #     Select(Order.price, Order.direction, Order.qty, Order.filled)
-    #     .where(
-    #         Order.ticker == ticker,
-    #         Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED]),
-    #         Order.price.is_not(None)
-    #     )
-    #     .fetch_all(database)
-    # )
-    #
-    # bids: dict[int, int] = {}
-    # asks: dict[int, int] = {}
-    #
-    # for order in orders:
-    #     if order['direction'] == Direction.BUY:
-    #         bids[order['price']] = bids.get(order['price'], 0) + (order['qty'] - order['filled'])
-    #     else:
-    #         asks[order['price']] = asks.get(order['price'], 0) + (order['qty'] - order['filled'])
 
     bid_orders = await (
         Select(Order.price, func.sum(Order.qty))
