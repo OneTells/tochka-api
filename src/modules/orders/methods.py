@@ -45,7 +45,7 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
 
     order_by = []
 
-    if order.direction == Direction.BUY:
+    if order_direction == Direction.BUY:
         if isinstance(order, LimitOrderBody):
             whereclause.append(Order.price <= order.price)
 
