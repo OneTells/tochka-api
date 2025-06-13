@@ -67,11 +67,8 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
     for order_ in opposite_orders:
         storage[order_.id] = order_
 
-    async with database.get_connection() as connection:
-        transaction = connection.transaction()
-        await transaction.start()
-
-        try:
+    try:
+        async with database.get_transaction() as transaction:
             user_ids = sorted({order.user_id, *(opp_order.user_id for opp_order in opposite_orders)})
 
             for user_id in user_ids:
@@ -107,10 +104,8 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
                         ticker=order_ticker,
                         amount=execute_qty,
                         price=execute_price,
-                        buyer_user_id=order.user_id if order_direction == Direction.BUY else storage[
-                            opposite_order_id].user_id,
-                        seller_user_id=storage[
-                            opposite_order_id].user_id if order_direction == Direction.BUY else order.user_id,
+                        buyer_user_id=order.user_id if order_direction == Direction.BUY else storage[opposite_order_id].user_id,
+                        seller_user_id=storage[opposite_order_id].user_id if order_direction == Direction.BUY else order.user_id,
                         buyer_order_id=order.id if order_direction == Direction.BUY else opposite_order_id,
                         seller_order_id=opposite_order_id if order_direction == Direction.BUY else order.id
                     )
@@ -142,13 +137,7 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
                 storage[order.id].status = OrderStatus.EXECUTED
             elif storage[order.id].filled > 0:
                 if not isinstance(order, LimitOrderBody):
-                    await (
-                        Update(Order)
-                        .values(status=OrderStatus.CANCELLED)
-                        .where(Order.id == order.id)
-                        .execute(database)
-                    )
-                    raise Exception()
+                    raise ValueError()
 
                 storage[order.id].status = OrderStatus.PARTIALLY_EXECUTED
 
@@ -162,8 +151,10 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
                     .where(Order.id == order_.id)
                     .execute(transaction)
                 )
-        except Exception as error:
-            _ = error
-            await transaction.rollback()
-        else:
-            await transaction.commit()
+    except ValueError:
+        await (
+            Update(Order)
+            .values(status=OrderStatus.CANCELLED)
+            .where(Order.id == order.id)
+            .execute(database)
+        )
