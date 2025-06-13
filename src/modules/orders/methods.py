@@ -136,7 +136,7 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
             if storage[order.id].qty == storage[order.id].filled:
                 storage[order.id].status = OrderStatus.EXECUTED
             elif storage[order.id].filled > 0:
-                if isinstance(order, LimitOrderBody):
+                if not isinstance(order, LimitOrderBody):
                     raise ValueError()
 
                 storage[order.id].status = OrderStatus.PARTIALLY_EXECUTED
