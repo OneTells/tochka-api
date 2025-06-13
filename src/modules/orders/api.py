@@ -72,6 +72,7 @@ async def create_order(
                 .where(
                     Order.direction == Direction.BUY,
                     Order.user_id == user.id,
+                    Order.price.is_not(None),
                     Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED])
                 )
                 .fetch_one(connection)
@@ -94,12 +95,12 @@ async def create_order(
                 Order.id, Order.user_id, Order.price, Order.qty,
                 Order.filled, Order.status, Order.direction, Order.ticker
             )
-            .fetch_all(connection, model=lambda x: (OrderModel(**x), x['direction'], x['ticker']))
+            .fetch_one(connection, model=lambda x: (OrderModel(**x), x['direction'], x['ticker']))
         )
 
-        await execute_order(connection, orders[0][0], orders[0][1], orders[0][2])
+        await execute_order(connection, orders[0], orders[1], orders[2])
 
-    return ORJSONResponse(content={"success": True, 'order_id': orders[0][0].id})
+    return ORJSONResponse(content={"success": True, 'order_id': orders[0].id})
 
 
 @router.get("/order")
