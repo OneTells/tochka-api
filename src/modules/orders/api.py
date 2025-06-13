@@ -1,6 +1,7 @@
 from typing import Annotated
 
-from everbase import Select, Insert, Update
+from asyncpg import Record
+from everbase import Select, Insert
 from fastapi import APIRouter, Depends, HTTPException, Body, Path, Query
 from fastapi.responses import ORJSONResponse
 from pydantic import UUID4
@@ -38,24 +39,44 @@ async def create_order(
             raise HTTPException(status_code=404, detail="Инструмент не найден")
 
         if order.direction == Direction.SELL:
-            response = await (
-                Select(true())
-                .select_from(Balance)
-                .where(Balance.user_id == user.id, Balance.ticker == order.ticker, Balance.amount >= order.qty)
+            balance = await (
+                Select(Balance.amount)
+                .where(Balance.user_id == user.id, Balance.ticker == order.ticker)
                 .fetch_one(connection)
             )
 
-            if response is None:
+            order_balance: Record = await (
+                Select(func.sum(Order.qty - Order.filled).label('amount'))
+                .where(
+                    Order.direction == Direction.SELL,
+                    Order.user_id == user.id,
+                    Order.ticker == order.ticker,
+                    Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED])
+                )
+                .fetch_one(connection)
+            )
+
+            if balance['amount'] - order_balance['amount'] - order.qty < 0:
                 raise HTTPException(status_code=409, detail="Недостаточно средств")
+
         elif isinstance(order, LimitOrderBody):
-            response = await (
-                Select(true())
-                .select_from(Balance)
-                .where(Balance.user_id == user.id, Balance.ticker == 'RUB', Balance.amount >= order.qty * order.price)
+            balance = await (
+                Select(Balance.amount)
+                .where(Balance.user_id == user.id, Balance.ticker == 'RUB')
                 .fetch_one(connection)
             )
 
-            if response is None:
+            order_balance: Record = await (
+                Select(func.sum((Order.qty - Order.filled) * Order.price).label('amount'))
+                .where(
+                    Order.direction == Direction.BUY,
+                    Order.user_id == user.id,
+                    Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED])
+                )
+                .fetch_one(connection)
+            )
+
+            if balance['amount'] - order_balance['amount'] - order.qty * order.price < 0:
                 raise HTTPException(status_code=409, detail="Недостаточно средств")
 
         orders = await (
@@ -67,7 +88,10 @@ async def create_order(
                 price=(order.price if isinstance(order, LimitOrderBody) else None),
                 direction=order.direction
             )
-            .returning(Order.id, Order.user_id, Order.price, Order.qty, Order.filled, Order.status, Order.direction, Order.ticker)
+            .returning(
+                Order.id, Order.user_id, Order.price, Order.qty,
+                Order.filled, Order.status, Order.direction, Order.ticker
+            )
             .fetch_all(connection, model=lambda x: (OrderModel(**x), x['direction'], x['ticker']))
         )
 
@@ -122,28 +146,19 @@ async def cancel_order(
     order_id: Annotated[UUID4, Path()],
     user: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
-    async with database.get_connection() as connection:
-        async with connection.transaction():
-            order = await (
-                Select(Order.id, Order.status)
-                .where(
-                    Order.user_id == user.id,
-                    Order.id == order_id,
-                    # Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED])
-                    Order.status.in_([OrderStatus.NEW])
-                )
-                .fetch_one(connection)
-            )
+    order = await (
+        Select(Order.id, Order.status, Order.ticker, Order.direction, Order.price, Order.qty)
+        .where(
+            Order.user_id == user.id,
+            Order.id == order_id,
+            # Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED])
+            Order.status.in_([OrderStatus.NEW])
+        )
+        .fetch_one(database)
+    )
 
-            if order is None:
-                raise HTTPException(status_code=409, detail="Ордер нельзя отменить")
-
-            await (
-                Update(Order)
-                .values(status=OrderStatus.CANCELLED)
-                .where(Order.id == order_id)
-                .execute(connection)
-            )
+    if order is None:
+        raise HTTPException(status_code=409, detail="Ордер нельзя отменить")
 
     return ORJSONResponse(content={"success": True})
 
