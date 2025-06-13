@@ -1,5 +1,6 @@
 from asyncpg import Connection, Record
 from everbase import Select, Insert, Update
+from fastapi import HTTPException
 from pydantic import UUID4
 from sqlalchemy import func
 
@@ -154,3 +155,4 @@ async def execute_order(connection: Connection, order: OrderModel, order_directi
             .where(Order.id == order.id)
             .execute(connection)
         )
+        raise HTTPException(status_code=409, detail="44")
