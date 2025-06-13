@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body, Path, Query
 from fastapi.responses import ORJSONResponse
 from loguru import logger
 from pydantic import UUID4
-from sqlalchemy import true
+from sqlalchemy import true, func
 
 from core.methods.authentication import Authentication
 from core.models.balance import Balance
@@ -151,24 +151,56 @@ async def get_order_book(
     if is_instrument_exist is None:
         raise HTTPException(status_code=404, detail="Инструмент не найден")
 
-    orders = await (
-        Select(Order.price, Order.direction, Order.qty, Order.filled)
-        .where(Order.ticker == ticker, Order.status == OrderStatus.NEW, Order.price.is_not(None))
+    # orders = await (
+    #     Select(Order.price, Order.direction, Order.qty, Order.filled)
+    #     .where(
+    #         Order.ticker == ticker,
+    #         Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED]),
+    #         Order.price.is_not(None)
+    #     )
+    #     .fetch_all(database)
+    # )
+    #
+    # bids: dict[int, int] = {}
+    # asks: dict[int, int] = {}
+    #
+    # for order in orders:
+    #     if order['direction'] == Direction.BUY:
+    #         bids[order['price']] = bids.get(order['price'], 0) + (order['qty'] - order['filled'])
+    #     else:
+    #         asks[order['price']] = asks.get(order['price'], 0) + (order['qty'] - order['filled'])
+
+    bid_orders = await (
+        Select(Order.price, func.sum(Order.qty))
+        .where(
+            Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED]),
+            Order.direction == Direction.BUY,
+            Order.ticker == ticker,
+            Order.price.is_not(None)
+        )
+        .group_by(Order.price)
+        .order_by(Order.price.desc())
+        .limit(limit)
         .fetch_all(database)
     )
 
-    bids: dict[int, int] = {}
-    asks: dict[int, int] = {}
-
-    for order in orders:
-        if order['direction'] == Direction.BUY:
-            bids[order['price']] = bids.get(order['price'], 0) + (order['qty'] - order['filled'])
-        else:
-            asks[order['price']] = asks.get(order['price'], 0) + (order['qty'] - order['filled'])
+    ask_orders = await (
+        Select(Order.price, func.sum(Order.qty))
+        .where(
+            Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED]),
+            Order.direction == Direction.SELL,
+            Order.ticker == ticker,
+            Order.price.is_not(None)
+        )
+        .group_by(Order.price)
+        .order_by(Order.price.asc())
+        .limit(limit)
+        .fetch_all(database)
+    )
 
     return ORJSONResponse(
         content=OrderBook(
-            bid_levels=[Level(price=price, qty=qty) for price, qty in sorted(bids.items(), reverse=True)[:limit]],
-            ask_levels=[Level(price=price, qty=qty) for price, qty in sorted(asks.items())[:limit]]
+            bid_levels=[Level(price=price, qty=qty) for price, qty in bid_orders],
+            ask_levels=[Level(price=price, qty=qty) for price, qty in ask_orders]
         ).model_dump()
     )
