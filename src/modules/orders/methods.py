@@ -85,7 +85,7 @@ async def execute_order(connection: Connection, order: OrderModel, order_directi
                     )
 
             # Удалить?
-            
+
             for opposite_order_ in opposite_orders:
                 if storage[order.id].qty - storage[order.id].filled == 0:
                     break
@@ -146,7 +146,7 @@ async def execute_order(connection: Connection, order: OrderModel, order_directi
                 storage[order.id].status = OrderStatus.PARTIALLY_EXECUTED
 
             for order_id, order_ in storage.items():
-                if order_.status == OrderStatus.NEW:
+                if order_.status not in (OrderStatus.EXECUTED, OrderStatus.PARTIALLY_EXECUTED):
                     continue
 
                 await (
