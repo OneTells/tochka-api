@@ -134,3 +134,4 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
                 .where(Order.id == order_.id)
                 .execute(transaction)
             )
+
