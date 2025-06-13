@@ -40,7 +40,7 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
         Order.direction != order_direction,
         Order.ticker == order_ticker,
         Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED]),
-        Order.user_id != order.user_id
+        # Order.user_id != order.user_id
     ]
 
     order_by = []
@@ -70,19 +70,20 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
 
     async with database.get_connection() as transaction:
         for opposite_order_ in opposite_orders:
-            opposite_order_id = opposite_order_.id
-
             if storage[order.id].qty - storage[order.id].filled == 0:
                 break
+
+            opposite_order_id = opposite_order_.id
+
+            execute_price = storage[opposite_order_id].price or order.price
+
+            if not execute_price:
+                continue
 
             execute_qty = min(
                 storage[order.id].qty - storage[order.id].filled,
                 storage[opposite_order_id].qty - storage[opposite_order_id].filled
             )
-            execute_price = storage[opposite_order_id].price or order.price
-
-            if not execute_price:
-                continue
 
             await (
                 Insert(Transaction)
