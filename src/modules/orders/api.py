@@ -56,7 +56,7 @@ async def create_order(
                 .fetch_one(connection)
             )
 
-            if balance['amount'] - order_balance['amount'] - order.qty < 0:
+            if balance['amount'] - (order_balance['amount'] or 0) - order.qty < 0:
                 raise HTTPException(status_code=409, detail="Недостаточно средств")
 
         elif isinstance(order, LimitOrderBody):
@@ -76,7 +76,7 @@ async def create_order(
                 .fetch_one(connection)
             )
 
-            if balance['amount'] - order_balance['amount'] - order.qty * order.price < 0:
+            if balance['amount'] - (order_balance['amount'] or 0) - order.qty * order.price < 0:
                 raise HTTPException(status_code=409, detail="Недостаточно средств")
 
         orders = await (
@@ -151,7 +151,6 @@ async def cancel_order(
         .where(
             Order.user_id == user.id,
             Order.id == order_id,
-            # Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED])
             Order.status.in_([OrderStatus.NEW])
         )
         .fetch_one(database)
