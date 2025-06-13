@@ -39,23 +39,35 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
     whereclause = [
         Order.direction != order_direction,
         Order.ticker == order_ticker,
-        Order.status == OrderStatus.NEW
+        Order.status == OrderStatus.NEW,
+        OrderModel.user_id != order.user_id
     ]
 
     order_by = []
 
-    if isinstance(order, LimitOrderBody):
-        if order_direction == Direction.BUY:
+    if order.direction == Direction.BUY:
+        if isinstance(order, LimitOrderBody):
             whereclause.append(Order.price <= order.price)
-        else:
+
+        order_by.append(Order.price.asc())
+    else:
+        if isinstance(order, LimitOrderBody):
             whereclause.append(Order.price >= order.price)
 
-        order_by.append(Order.price)
-    else:
-        if order_direction == Direction.BUY:
-            order_by.append(Order.price)
-        else:
-            order_by.append(Order.price.desc())
+        order_by.append(Order.price.desc())
+
+    # if isinstance(order, LimitOrderBody):
+    #     if order_direction == Direction.BUY:
+    #         whereclause.append(Order.price <= order.price)
+    #     else:
+    #         whereclause.append(Order.price >= order.price)
+    #
+    #     order_by.append(Order.price)
+    # else:
+    #     if order_direction == Direction.BUY:
+    #         order_by.append(Order.price)
+    #     else:
+    #         order_by.append(Order.price.desc())
 
     opposite_orders = await (
         Select(Order.id, Order.user_id, Order.price, Order.qty, Order.filled, Order.status)
@@ -101,13 +113,15 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
 
             if order_direction == Direction.BUY:
                 await withdraw(transaction, order.user_id, "RUB", execute_qty * execute_price)
+                await withdraw(transaction, storage[opposite_order_id].user_id, order_ticker, execute_qty)
+
                 await deposit(transaction, order.user_id, order_ticker, execute_qty)
                 await deposit(transaction, storage[opposite_order_id].user_id, "RUB", execute_qty * execute_price)
-                await withdraw(transaction, storage[opposite_order_id].user_id, order_ticker, execute_qty)
             else:
-                await deposit(transaction, order.user_id, "RUB", execute_qty * execute_price)
                 await withdraw(transaction, order.user_id, order_ticker, execute_qty)
                 await withdraw(transaction, storage[opposite_order_id].user_id, "RUB", execute_qty * execute_price)
+
+                await deposit(transaction, order.user_id, "RUB", execute_qty * execute_price)
                 await deposit(transaction, storage[opposite_order_id].user_id, order_ticker, execute_qty)
 
             storage[order.id].filled += execute_qty
