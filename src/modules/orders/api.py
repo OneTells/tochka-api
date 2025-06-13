@@ -155,7 +155,7 @@ async def get_order_book(
         raise HTTPException(status_code=404, detail="Инструмент не найден")
 
     bid_orders = await (
-        Select(Order.price, func.sum(Order.qty))
+        Select(Order.price, func.sum(Order.qty) - func.sum(Order.filled))
         .where(
             Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED]),
             Order.direction == Direction.BUY,
@@ -163,13 +163,13 @@ async def get_order_book(
             Order.price.is_not(None)
         )
         .group_by(Order.price)
-        .order_by(Order.price.desc())
+        .order_by(Order.price.desc(), Order.timestamp.asc())
         .limit(limit)
         .fetch_all(database)
     )
 
     ask_orders = await (
-        Select(Order.price, func.sum(Order.qty))
+        Select(Order.price, func.sum(Order.qty) - func.sum(Order.filled))
         .where(
             Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED]),
             Order.direction == Direction.SELL,
@@ -177,7 +177,7 @@ async def get_order_book(
             Order.price.is_not(None)
         )
         .group_by(Order.price)
-        .order_by(Order.price.asc())
+        .order_by(Order.price.asc(), Order.timestamp.asc())
         .limit(limit)
         .fetch_all(database)
     )
