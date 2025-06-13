@@ -45,6 +45,9 @@ async def create_order(
                 .fetch_one(connection)
             )
 
+            if balance is None:
+                raise HTTPException(status_code=409, detail="Недостаточно средств")
+
             order_balance: Record = await (
                 Select(func.sum(Order.qty - Order.filled).label('amount'))
                 .where(
@@ -66,6 +69,9 @@ async def create_order(
                 .where(Balance.user_id == user.id, Balance.ticker == 'RUB')
                 .fetch_one(connection)
             )
+
+            if balance is None:
+                raise HTTPException(status_code=409, detail="Недостаточно средств")
 
             order_balance: Record = await (
                 Select(func.sum((Order.qty - Order.filled) * Order.price).label('amount'))

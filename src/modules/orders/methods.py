@@ -155,4 +155,3 @@ async def execute_order(connection: Connection, order: OrderModel, order_directi
             .where(Order.id == order.id)
             .execute(connection)
         )
-        raise HTTPException(status_code=409, detail="44")
