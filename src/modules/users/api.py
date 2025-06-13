@@ -1,17 +1,20 @@
 import uuid
 from typing import Annotated
 
+from asyncpg import Record
 from everbase import Insert, Select, Delete, Update
 from fastapi import APIRouter, Body, Depends, Path, HTTPException
 from fastapi.responses import ORJSONResponse
 from pydantic import UUID4
-from sqlalchemy import true
+from sqlalchemy import true, func
 
 from core.methods.authentication import Authentication
 from core.models.balance import Balance
 from core.models.instrument import Instrument
+from core.models.order import Order
 from core.models.user import User
 from core.objects.database import database
+from core.schemes.order import Direction, OrderStatus
 from core.schemes.user import UserRole
 from modules.users.schemes import UserModel
 
@@ -24,10 +27,10 @@ async def create_user(name: Annotated[str, Body(embed=True, min_length=3)]):
         Insert(User)
         .values(name=name, api_key=f'{uuid.uuid4()}')
         .returning(User.id, User.name, User.role, User.api_key)
-        .fetch_all(database, model=UserModel)
+        .fetch_one(database, model=UserModel)
     )
 
-    return ORJSONResponse(content=response[0].model_dump())
+    return ORJSONResponse(content=response.model_dump())
 
 
 @router.get('/balance')
@@ -50,13 +53,13 @@ async def delete_user(
         Delete(User)
         .where(User.id == user_id)
         .returning(User.id, User.name, User.role, User.api_key)
-        .fetch_all(database, model=UserModel)
+        .fetch_one(database, model=UserModel)
     )
 
     if not response:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-    return ORJSONResponse(content=response[0].model_dump())
+    return ORJSONResponse(content=response.model_dump())
 
 
 @router.post("/admin/balance/deposit")
@@ -128,15 +131,36 @@ async def withdraw(
     if is_instrument_exist is None:
         raise HTTPException(status_code=404, detail="Инструмент не найден")
 
-    response = await (
-        Update(Balance)
-        .values(amount=Balance.amount - amount)
-        .where(Balance.user_id == user_id, Balance.ticker == ticker, Balance.amount >= amount)
-        .returning(true())
-        .fetch_all(database)
+    balance = await (
+        Select(Balance.amount)
+        .where(Balance.user_id == user_id, Balance.ticker == ticker)
+        .fetch_one(database)
     )
 
-    if not response:
+    if balance is None:
         raise HTTPException(status_code=409, detail="Недостаточно средств")
+
+    order_balance: Record = await (
+        Select(func.sum(Order.qty - Order.filled).label('amount'))
+        .where(
+            Order.direction == Direction.SELL,
+            Order.user_id == user_id,
+            Order.ticker == ticker,
+            Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED])
+        )
+        .fetch_one(database)
+    )
+
+    available = balance['amount'] - (order_balance['amount'] or 0)
+
+    if available < amount:
+        raise HTTPException(status_code=409, detail="Недостаточно средств")
+
+    await (
+        Update(Balance)
+        .values(amount=Balance.amount - amount)
+        .where(Balance.user_id == user_id, Balance.ticker == ticker)
+        .execute(database)
+    )
 
     return ORJSONResponse(content={"success": True})

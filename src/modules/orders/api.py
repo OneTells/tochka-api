@@ -158,9 +158,9 @@ async def cancel_order(
     order = await (
         Select(Order.id, Order.status, Order.ticker, Order.direction, Order.price, Order.qty)
         .where(
-            Order.user_id == user.id,
+            ((Order.user_id == user.id) if user.role == UserRole.USER else True),
             Order.id == order_id,
-            Order.status.in_([OrderStatus.NEW])
+            Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED])
         )
         .fetch_one(database)
     )
