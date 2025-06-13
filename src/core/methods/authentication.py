@@ -52,6 +52,6 @@ class Authentication:
         user = await self.__get_user(authorization)
 
         if self.__user_role == UserRole.ADMIN and user.role != UserRole.ADMIN:
-            raise HTTPException(status_code=403, detail="Не достаточно прав")
+            raise HTTPException(status_code=403, detail="Недостаточно прав")
 
         return user
