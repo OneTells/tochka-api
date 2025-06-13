@@ -39,8 +39,7 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
     whereclause = [
         Order.direction != order_direction,
         Order.ticker == order_ticker,
-        Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED]),
-        # Order.user_id != order.user_id
+        Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED])
     ]
 
     order_by = []
@@ -68,7 +67,20 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
     for order_ in opposite_orders:
         storage[order_.id] = order_
 
-    async with database.get_connection() as transaction:
+    async with database.get_transaction() as transaction:
+        user_ids = sorted({order.user_id, *(opp_order.user_id for opp_order in opposite_orders)})
+
+        for user_id in user_ids:
+            await transaction.execute(
+                "SELECT 1 FROM balances WHERE user_id = $1 AND ticker = 'RUB' FOR UPDATE", user_id
+            )
+
+            if order_ticker != 'RUB':
+                await transaction.execute(
+                    "SELECT 1 FROM balances WHERE user_id = $1 AND ticker = $2 FOR UPDATE",
+                    user_id, order_ticker
+                )
+
         for opposite_order_ in opposite_orders:
             if storage[order.id].qty - storage[order.id].filled == 0:
                 break
