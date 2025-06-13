@@ -72,7 +72,7 @@ async def create_order(
     )
 
     await execute_order(orders[0][0], orders[0][1], orders[0][2])
-    logger.info(f"Order {orders} created")
+
     return ORJSONResponse(content={"success": True, 'order_id': orders[0][0].id})
 
 
