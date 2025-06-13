@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from asyncpg import Record
-from everbase import Select, Insert
+from everbase import Select, Insert, Update
 from fastapi import APIRouter, Depends, HTTPException, Body, Path, Query
 from fastapi.responses import ORJSONResponse
 from pydantic import UUID4
@@ -155,18 +155,29 @@ async def cancel_order(
     order_id: Annotated[UUID4, Path()],
     user: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
-    order = await (
-        Select(Order.id, Order.status, Order.ticker, Order.direction, Order.price, Order.qty)
-        .where(
-            ((Order.user_id == user.id) if user.role == UserRole.USER else True),
-            Order.id == order_id,
-            Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED])
+    async with database.get_connection() as connection:
+        order = await (
+            Select(Order.id, Order.status, Order.ticker, Order.direction, Order.price, Order.qty)
+            .where(
+                ((Order.user_id == user.id) if user.role == UserRole.USER else True),
+                Order.id == order_id,
+                Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED])
+            )
+            .fetch_one(connection)
         )
-        .fetch_one(database)
-    )
 
-    if order is None:
-        raise HTTPException(status_code=409, detail="Ордер нельзя отменить")
+        if order is None:
+            raise HTTPException(status_code=409, detail="Ордер нельзя отменить")
+
+        unfilled_qty = order['qty'] - order['filled']
+
+        await (
+            Update(Order)
+            .where(Order.id == order_id)
+            .values(status=OrderStatus.CANCELLED)
+            .fetch_one(connection)
+        )
+
 
     return ORJSONResponse(content={"success": True})
 
