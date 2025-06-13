@@ -69,6 +69,8 @@ async def execute_order(connection: Connection, order: OrderModel, order_directi
 
     try:
         async with connection.transaction():
+            # Удалить?
+
             user_ids = sorted({order.user_id, *(opp_order.user_id for opp_order in opposite_orders)})
 
             for user_id in user_ids:
@@ -82,6 +84,8 @@ async def execute_order(connection: Connection, order: OrderModel, order_directi
                         user_id, order_ticker
                     )
 
+            # Удалить?
+            
             for opposite_order_ in opposite_orders:
                 if storage[order.id].qty - storage[order.id].filled == 0:
                     break

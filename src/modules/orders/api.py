@@ -127,9 +127,7 @@ async def cancel_order(
         .where(
             Order.user_id == user.id,
             Order.id == order_id,
-            Order.status != OrderStatus.CANCELLED,
-            Order.status != OrderStatus.EXECUTED,
-            (Order.status == OrderStatus.NEW) | ((Order.status == OrderStatus.PARTIALLY_EXECUTED) & (Order.price.is_not(None)))
+            (Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED]) & Order.price.is_not(None))
         )
         .values(status=OrderStatus.CANCELLED)
         .returning(true())
