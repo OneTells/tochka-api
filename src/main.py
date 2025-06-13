@@ -1,8 +1,10 @@
 from fastapi import FastAPI, APIRouter
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
-from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
+from loguru import logger
+from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR, HTTP_422_UNPROCESSABLE_ENTITY
 
 from core.methods.lifespan import Lifespan
 from core.middleware.logger import LoggerMiddleware
@@ -42,11 +44,14 @@ def exception_handler(_: Request, __: Exception):
     )
 
 
-# @app.exception_handler(RequestValidationError)
-# def validation_exception_handler(_: Request, __: RequestValidationError):
-#     return JSONResponse(
-#         {'detail': "Необрабатываемая сущность"}, status_code=HTTP_422_UNPROCESSABLE_ENTITY,
-#     )
+@app.exception_handler(RequestValidationError)
+def validation_exception_handler(request: Request, exception: RequestValidationError):
+    logger.info(f'{request.body()}')
+    logger.info(f'{exception}')
+
+    return JSONResponse(
+        {'detail': "Необрабатываемая сущность"}, status_code=HTTP_422_UNPROCESSABLE_ENTITY,
+    )
 
 
 if __name__ == '__main__':

@@ -40,7 +40,7 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
         Order.direction != order_direction,
         Order.ticker == order_ticker,
         Order.status == OrderStatus.NEW,
-        OrderModel.user_id != order.user_id
+        Order.user_id != order.user_id
     ]
 
     order_by = []
