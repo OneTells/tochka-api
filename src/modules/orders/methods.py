@@ -1,6 +1,7 @@
 import uuid
 
 from everbase import Select, Insert, Update
+from everbase.pool import Connection
 from pydantic import UUID4
 
 from core.models.balance import Balance
@@ -11,7 +12,7 @@ from core.schemes.order import Direction, OrderStatus
 from modules.orders.schemes import LimitOrderBody, OrderModel
 
 
-async def deposit(transaction, user_id: UUID4, ticker: str, amount: int):
+async def deposit(transaction: Connection, user_id: UUID4, ticker: str, amount: int):
     await (
         (query := (
             Insert(Balance)
@@ -68,7 +69,7 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
     for order_ in opposite_orders:
         storage[order_.id] = order_
 
-    async with database.get_transaction() as transaction:
+    async with database.get_connection() as transaction:
         for opposite_order_ in opposite_orders:
             opposite_order_id = opposite_order_.id
 

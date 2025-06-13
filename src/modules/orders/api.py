@@ -59,7 +59,13 @@ async def create_order(
 
     orders = await (
         Insert(Order)
-        .values(user_id=user.id, ticker=order.ticker, qty=order.qty, price=order.price, direction=order.direction)
+        .values(
+            user_id=user.id,
+            ticker=order.ticker,
+            qty=order.qty,
+            price=(order.price if isinstance(order, LimitOrderBody) else None),
+            direction=order.direction
+        )
         .returning(Order.id, Order.user_id, Order.price, Order.qty, Order.filled, Order.status, Order.direction, Order.ticker)
         .fetch_all(database, model=lambda x: (OrderModel(**x), x['direction'], x['ticker']))
     )
