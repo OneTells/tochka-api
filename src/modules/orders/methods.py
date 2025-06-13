@@ -59,7 +59,7 @@ async def execute_order(order: OrderModel, order_direction: Direction, order_tic
     opposite_orders = await (
         Select(Order.id, Order.user_id, Order.price, Order.qty, Order.filled, Order.status)
         .where(*whereclause)
-        .order_by(*order_by)
+        .order_by(*order_by, Order.timestamp.asc())
         .fetch_all(database, model=OrderModel)
     )
 
