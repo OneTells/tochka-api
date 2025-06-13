@@ -82,7 +82,7 @@ async def get_user_orders(
 ):
     response = await (
         Select(Order)
-        .where(Order.user_id == user.id, Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED]))
+        .where(Order.user_id == user.id)
         .fetch_all(database)
     )
 
@@ -124,11 +124,7 @@ async def cancel_order(
 ):
     response = await (
         Update(Order)
-        .where(
-            Order.user_id == user.id,
-            Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED]),
-            Order.id == order_id
-        )
+        .where(Order.user_id == user.id, Order.id == order_id)
         .values(status=OrderStatus.CANCELLED)
         .returning(true())
         .fetch_all(database)
