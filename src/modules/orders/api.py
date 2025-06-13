@@ -3,6 +3,7 @@ from typing import Annotated
 from everbase import Select, Insert, Update
 from fastapi import APIRouter, Depends, HTTPException, Body, Path, Query
 from fastapi.responses import ORJSONResponse
+from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import true
 
@@ -71,7 +72,7 @@ async def create_order(
     )
 
     await execute_order(orders[0][0], orders[0][1], orders[0][2])
-
+    logger.info(f"Order {orders} created")
     return ORJSONResponse(content={"success": True, 'order_id': orders[0][0].id})
 
 
