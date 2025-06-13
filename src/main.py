@@ -52,4 +52,4 @@ def exception_handler(_: Request, __: Exception):
 if __name__ == '__main__':
     import uvicorn
 
-    uvicorn.run('main:app', workers=3, host='0.0.0.0', timeout_keep_alive=600, forwarded_allow_ips="172.19.0.3")
+    uvicorn.run('main:app', workers=1, host='0.0.0.0', timeout_keep_alive=600, forwarded_allow_ips="172.19.0.3")
