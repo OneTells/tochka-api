@@ -122,20 +122,28 @@ async def cancel_order(
     order_id: Annotated[UUID4, Path()],
     user: Annotated[UserModel, Depends(Authentication(user_role=UserRole.USER))]
 ):
-    response = await (
-        Update(Order)
-        .where(
-            Order.user_id == user.id,
-            Order.id == order_id,
-            (Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED]) & Order.price.is_not(None))
-        )
-        .values(status=OrderStatus.CANCELLED)
-        .returning(true())
-        .fetch_all(database)
-    )
+    async with database.get_connection() as connection:
+        async with connection.transaction():
+            order = await (
+                Select(Order.id, Order.status)
+                .where(
+                    Order.user_id == user.id,
+                    Order.id == order_id,
+                    # Order.status.in_([OrderStatus.NEW, OrderStatus.PARTIALLY_EXECUTED])
+                    Order.status.in_([OrderStatus.NEW])
+                )
+                .fetch_one(connection)
+            )
 
-    if not response:
-        raise HTTPException(status_code=409, detail="Ордер нельзя отменить")
+            if order is None:
+                raise HTTPException(status_code=409, detail="Ордер нельзя отменить")
+
+            await (
+                Update(Order)
+                .values(status=OrderStatus.CANCELLED)
+                .where(Order.id == order_id)
+                .execute(connection)
+            )
 
     return ORJSONResponse(content={"success": True})
 
